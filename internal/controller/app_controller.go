@@ -16,6 +16,7 @@ func NewAppController() *AppController {
 }
 
 func (c *AppController) Route(r *gin.Engine) {
+	r.GET("/", c.Index)
 	r.NoRoute(c.RouteNotFound)
 	r.NoMethod(c.MethodNotAllowed)
 	r.GET("/health", c.Health)
@@ -36,5 +37,11 @@ func (c *AppController) RouteNotFound(ctx *gin.Context) {
 func (c *AppController) MethodNotAllowed(ctx *gin.Context) {
 	ctx.JSON(http.StatusMethodNotAllowed, dto.WebResponse[any]{
 		Message: "method not allowed",
+	})
+}
+
+func (c *AppController) Index(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, dto.WebResponse[any]{
+		Message: "TWClone API's is ready to use!",
 	})
 }
