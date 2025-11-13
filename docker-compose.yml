@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  database:
+    image: postgres:latest
+    container_name: TwCloneDB
+    environment:
+      POSTGRES_USER: twcloneuser
+      POSTGRES_PASSWORD: twclonepass
+      POSTGRES_DB: twclonedb
+    ports:
+      - "5432:5432"
+    networks:
+      - twclone-network
+
+networks:
+  twclone-network:
+    driver: bridge
