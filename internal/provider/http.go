@@ -1,8 +1,9 @@
 package provider
 
 import (
-	"github.com/JordanMarcelino/go-gin-starter/internal/config"
-	"github.com/JordanMarcelino/go-gin-starter/internal/controller"
+	"TWclone/internal/config"
+	"TWclone/internal/controller"
+
 	"github.com/gin-gonic/gin"
 )
 

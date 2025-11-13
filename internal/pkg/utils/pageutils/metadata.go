@@ -3,7 +3,7 @@ package pageutils
 import (
 	"math"
 
-	"github.com/JordanMarcelino/go-gin-starter/internal/dto"
+	"TWclone/internal/dto"
 )
 
 func CreateMetaData[T any](items []T, page, limit int64) ([]T, *dto.PageMetaData) {

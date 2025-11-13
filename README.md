@@ -23,7 +23,7 @@ A robust and scalable starter template for building backend applications using G
 Clone the repository using the command below:
 
 ```bash
-git clone https://github.com/JordanMarcelino/go-gin-starter
+git clone https://TWclone
 ```
 
 Or you can also use this repository as template

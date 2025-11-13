@@ -1,6 +1,6 @@
 package main
 
-import "github.com/JordanMarcelino/go-gin-starter/cmd/workers"
+import "TWclone/cmd/workers"
 
 func main() {
 	workers.Start()

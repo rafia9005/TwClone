@@ -4,7 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/JordanMarcelino/go-gin-starter/internal/config"
+	"TWclone/internal/config"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )

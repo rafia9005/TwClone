@@ -1,15 +1,20 @@
 package provider
 
 import (
-	"github.com/JordanMarcelino/go-gin-starter/internal/config"
-	"github.com/JordanMarcelino/go-gin-starter/internal/database"
-	"github.com/jmoiron/sqlx"
+	"TWclone/internal/config"
+	"TWclone/internal/database"
+
+	"gorm.io/gorm"
 )
 
 var (
-	db *sqlx.DB
+	db *gorm.DB
 )
 
 func InitGlobal(cfg *config.Config) {
-	db = database.InitPostgres(cfg)
+	var err error
+	db, err = database.InitGorm(cfg)
+	if err != nil {
+		panic(err)
+	}
 }

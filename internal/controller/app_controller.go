@@ -3,7 +3,8 @@ package controller
 import (
 	"net/http"
 
-	"github.com/JordanMarcelino/go-gin-starter/internal/dto"
+	"TWclone/internal/dto"
+
 	"github.com/gin-gonic/gin"
 )
 

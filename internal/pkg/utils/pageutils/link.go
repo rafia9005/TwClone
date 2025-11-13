@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/JordanMarcelino/go-gin-starter/internal/dto"
+	"TWclone/internal/dto"
 )
 
 const (

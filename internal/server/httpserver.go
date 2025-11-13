@@ -7,11 +7,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/JordanMarcelino/go-gin-starter/internal/config"
-	"github.com/JordanMarcelino/go-gin-starter/internal/middleware"
-	"github.com/JordanMarcelino/go-gin-starter/internal/pkg/logger"
-	"github.com/JordanMarcelino/go-gin-starter/internal/pkg/utils/validationutils"
-	"github.com/JordanMarcelino/go-gin-starter/internal/provider"
+	"TWclone/internal/config"
+	"TWclone/internal/middleware"
+	"TWclone/internal/pkg/logger"
+	"TWclone/internal/pkg/utils/validationutils"
+	"TWclone/internal/provider"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"

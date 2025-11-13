@@ -7,9 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/JordanMarcelino/go-gin-starter/internal/config"
-	"github.com/JordanMarcelino/go-gin-starter/internal/pkg/logger"
-	"github.com/JordanMarcelino/go-gin-starter/internal/provider"
+	"TWclone/internal/config"
+	"TWclone/internal/pkg/logger"
+	"TWclone/internal/provider"
+
 	"github.com/spf13/cobra"
 )
 

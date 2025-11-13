@@ -4,13 +4,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/JordanMarcelino/go-gin-starter/internal/config"
-	"github.com/JordanMarcelino/go-gin-starter/internal/pkg/logger"
+	"TWclone/internal/config"
+	"TWclone/internal/entity"
+	"TWclone/internal/pkg/logger"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/jmoiron/sqlx"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-func InitPostgres(cfg *config.Config) *sqlx.DB {
+var DB *gorm.DB
+
+func InitGorm(cfg *config.Config) (*gorm.DB, error) {
 	dbCfg := cfg.Database
 
 	dsn := fmt.Sprintf(
@@ -23,14 +29,27 @@ func InitPostgres(cfg *config.Config) *sqlx.DB {
 		dbCfg.Sslmode,
 	)
 
-	db, err := sqlx.Connect("pgx", dsn)
+	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		logger.Log.Fatalf("error connecting to database: %v", err)
+		logger.Log.Fatalf("failed to connect to gorm database: %v", err)
+		return nil, err
 	}
 
-	db.SetMaxIdleConns(dbCfg.MaxIdleConn)
-	db.SetMaxOpenConns(dbCfg.MaxOpenConn)
-	db.SetConnMaxLifetime(time.Duration(dbCfg.MaxConnLifetime) * time.Minute)
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		logger.Log.Fatalf("failed to get sql DB from gorm: %v", err)
+		return nil, err
+	}
+	sqlDB.SetMaxIdleConns(dbCfg.MaxIdleConn)
+	sqlDB.SetMaxOpenConns(dbCfg.MaxOpenConn)
+	sqlDB.SetConnMaxLifetime(time.Duration(dbCfg.MaxConnLifetime) * time.Minute)
 
-	return db
+	if err := gdb.AutoMigrate(&entity.User{}); err != nil {
+		logger.Log.Fatalf("failed to run automigrate: %v", err)
+		return nil, err
+	}
+
+	gdb.AutoMigrate(&entity.User{})
+
+	return gdb, nil
 }
