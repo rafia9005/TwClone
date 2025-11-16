@@ -15,10 +15,10 @@ func NewAppController() *AppController {
 	return &AppController{}
 }
 
-func (c *AppController) Route(r *gin.Engine) {
+func (c *AppController) Route(r gin.IRouter) {
 	r.GET("/", c.Index)
-	r.NoRoute(c.RouteNotFound)
-	r.NoMethod(c.MethodNotAllowed)
+	// NoRoute/NoMethod are only available on Engine, not RouterGroup.
+	// Keep health and index on the group.
 	r.GET("/health", c.Health)
 }
 

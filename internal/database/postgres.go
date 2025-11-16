@@ -49,7 +49,5 @@ func InitGorm(cfg *config.Config) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	gdb.AutoMigrate(&entity.User{})
-
 	return gdb, nil
 }

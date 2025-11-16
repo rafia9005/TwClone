@@ -6,6 +6,8 @@ import (
 
 	"TWclone/internal/database"
 	"TWclone/internal/entity"
+
+	"gorm.io/gorm"
 )
 
 var (
@@ -14,17 +16,17 @@ var (
 
 type UserRepositoryImpl struct{}
 
-// Create implements UserRepository.
+// Create inserts a new user.
 func (r UserRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
 	return database.DB.WithContext(ctx).Create(user).Error
 }
 
-// Delete implements UserRepository.
-func (r UserRepositoryImpl) Delete(ctx context.Context, id uint) error {
+// Delete removes a user by id.
+func (r UserRepositoryImpl) Delete(ctx context.Context, id int64) error {
 	return database.DB.WithContext(ctx).Delete(&entity.User{}, id).Error
 }
 
-// FindAll finds all users
+// FindAll returns all users.
 func (r UserRepositoryImpl) FindAll(ctx context.Context) ([]*entity.User, error) {
 	var users []*entity.User
 	result := database.DB.WithContext(ctx).Find(&users)
@@ -34,31 +36,46 @@ func (r UserRepositoryImpl) FindAll(ctx context.Context) ([]*entity.User, error)
 	return users, nil
 }
 
-// FindByEmail implements UserRepository.
+// FindByEmail finds a user by email.
 func (r UserRepositoryImpl) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var user entity.User
 	result := database.DB.WithContext(ctx).Where("email = ?", email).First(&user)
 	if result.Error != nil {
-		if result.RowsAffected == 0 {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ERR_RECORD_NOT_FOUND
 		}
-
 		return nil, result.Error
 	}
 	return &user, nil
 }
 
-// FindByID implements UserRepository.
-func (r UserRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity.User, error) {
+// FindByUsername finds a user by username.
+func (r UserRepositoryImpl) FindByUsername(ctx context.Context, username string) (*entity.User, error) {
+	var user entity.User
+	result := database.DB.WithContext(ctx).Where("username = ?", username).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ERR_RECORD_NOT_FOUND
+		}
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+// FindByID finds a user by id.
+func (r UserRepositoryImpl) FindByID(ctx context.Context, id int64) (*entity.User, error) {
 	var user entity.User
 	result := database.DB.WithContext(ctx).First(&user, id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ERR_RECORD_NOT_FOUND
+		}
 		return nil, result.Error
 	}
 	return &user, nil
 }
 
-// Update implements UserRepository.
+// Update modifies an existing user.
 func (r UserRepositoryImpl) Update(ctx context.Context, user *entity.User) error {
 	return database.DB.WithContext(ctx).Save(user).Error
 }
