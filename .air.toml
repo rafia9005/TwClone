@@ -7,7 +7,7 @@ tmp_dir = "tmp"
   bin = "./tmp/main"
   cmd = "go build -tags=\"sonic avx\" -v -o ./tmp/main ./cmd/api/main.go"
   delay = 1000
-  exclude_dir = ["tmp", "assets", "vendor", "bin", "build", "deploy"]
+  exclude_dir = ["tmp", "assets", "vendor", "bin", "build", "deploy", "api"]
   exclude_file = []
   exclude_regex = ["_test.go"]
   exclude_unchanged = false

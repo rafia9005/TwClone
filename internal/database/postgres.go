@@ -35,6 +35,9 @@ func InitGorm(cfg *config.Config) (*gorm.DB, error) {
 		return nil, err
 	}
 
+	// Set package-level DB so repositories using database.DB won't be nil
+	DB = gdb
+
 	sqlDB, err := gdb.DB()
 	if err != nil {
 		logger.Log.Fatalf("failed to get sql DB from gorm: %v", err)

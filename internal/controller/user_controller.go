@@ -6,6 +6,7 @@ import (
 
 	"TWclone/internal/dto"
 	"TWclone/internal/entity"
+	"TWclone/internal/pkg/utils/encryptutils"
 	"TWclone/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,14 @@ func (c *UserController) Create(ctx *gin.Context) {
 		return
 	}
 
+	// hash password before storing
+	enc := encryptutils.NewBcryptEncryptor(10)
+	hashed, err := enc.Hash(req.Password)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to hash password"})
+		return
+	}
+
 	user := &entity.User{
 		Email:    req.Email,
 		Name:     req.Name,
@@ -62,7 +71,7 @@ func (c *UserController) Create(ctx *gin.Context) {
 		Avatar:   req.Avatar,
 		Banner:   req.Banner,
 		Bio:      req.Bio,
-		Password: req.Password,
+		Password: hashed,
 	}
 
 	if err := c.repo.Create(ctx, user); err != nil {
@@ -70,7 +79,7 @@ func (c *UserController) Create(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, dto.WebResponse[*entity.User]{Message: "created", Data: user})
+	ctx.JSON(http.StatusCreated, dto.WebResponse[dto.UserResponse]{Message: "created", Data: dto.FromEntity(user)})
 }
 
 func (c *UserController) FindAll(ctx *gin.Context) {
@@ -79,7 +88,12 @@ func (c *UserController) FindAll(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch users"})
 		return
 	}
-	ctx.JSON(http.StatusOK, dto.WebResponse[any]{Data: users})
+	// convert to response DTOs to avoid leaking password
+	resp := make([]dto.UserResponse, 0, len(users))
+	for _, u := range users {
+		resp = append(resp, dto.FromEntity(u))
+	}
+	ctx.JSON(http.StatusOK, dto.WebResponse[any]{Data: resp})
 }
 
 func (c *UserController) FindByID(ctx *gin.Context) {
@@ -99,7 +113,7 @@ func (c *UserController) FindByID(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch user"})
 		return
 	}
-	ctx.JSON(http.StatusOK, dto.WebResponse[*entity.User]{Data: user})
+	ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Data: dto.FromEntity(user)})
 }
 
 func (c *UserController) Update(ctx *gin.Context) {
@@ -142,14 +156,20 @@ func (c *UserController) Update(ctx *gin.Context) {
 		user.Bio = *req.Bio
 	}
 	if req.Password != nil {
-		user.Password = *req.Password
+		enc := encryptutils.NewBcryptEncryptor(10)
+		hashed, err := enc.Hash(*req.Password)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to hash password"})
+			return
+		}
+		user.Password = hashed
 	}
 
 	if err := c.repo.Update(ctx, user); err != nil {
 		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to update user"})
 		return
 	}
-	ctx.JSON(http.StatusOK, dto.WebResponse[*entity.User]{Message: "updated", Data: user})
+	ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Message: "updated", Data: dto.FromEntity(user)})
 }
 
 func (c *UserController) Delete(ctx *gin.Context) {

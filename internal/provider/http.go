@@ -19,9 +19,15 @@ func BootstrapHttp(cfg *config.Config, router *gin.Engine) {
 
 	base := router.Group(basePath)
 
-	appController := controller.NewAppController()
-	appController.Route(base)
+	appCtrl := controller.NewAppController()
+	appCtrl.Route(base)
 
-	userController := controller.NewUserController()
-	userController.Route(base)
+	userCtrl := controller.NewUserController()
+	userCtrl.Route(base)
+
+	authCtrl := controller.NewAuthController(cfg)
+	authCtrl.Route(base)
+
+	router.NoRoute(appCtrl.RouteNotFound)
+	router.NoMethod(appCtrl.MethodNotAllowed)
 }

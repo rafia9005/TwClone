@@ -1,0 +1,162 @@
+{
+  "info": {
+    "name": "TwClone API",
+    "_postman_id": "twclone-collection",
+    "description": "Postman collection organized by API version and controller folders. Replace {{ENDPOINT}} and {{TOKEN}} in environment or globals.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "api",
+      "item": [
+        {
+          "name": "v1",
+          "item": [
+            {
+              "name": "app",
+              "item": [
+                {
+                  "name": "Health",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{ENDPOINT}}/api/v1/health",
+                      "host": ["{{ENDPOINT}}"],
+                      "path": ["api","v1","health"]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "auth",
+              "item": [
+                {
+                  "name": "Register (create user)",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      { "key": "Content-Type", "value": "application/json" }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"email\": \"bob@example.com\",\n  \"username\": \"bob\",\n  \"name\": \"Bob\",\n  \"password\": \"secret123\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{ENDPOINT}}/api/v1/users",
+                      "host": ["{{ENDPOINT}}"],
+                      "path": ["api","v1","users"]
+                    }
+                  }
+                },
+                {
+                  "name": "Login (get token)",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      { "key": "Content-Type", "value": "application/json" }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"secret123\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{ENDPOINT}}/api/v1/auth/login",
+                      "host": ["{{ENDPOINT}}"],
+                      "path": ["api","v1","auth","login"]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "users",
+              "item": [
+                {
+                  "name": "Create User (Register)",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      { "key": "Content-Type", "value": "application/json" }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"email\": \"alice@example.com\",\n  \"username\": \"alice\",\n  \"name\": \"Alice\",\n  \"password\": \"secret123\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{ENDPOINT}}/api/v1/users",
+                      "host": ["{{ENDPOINT}}"],
+                      "path": ["api","v1","users"]
+                    }
+                  }
+                },
+                {
+                  "name": "List Users",
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+                    ],
+                    "url": {
+                      "raw": "{{ENDPOINT}}/api/v1/users",
+                      "host": ["{{ENDPOINT}}"],
+                      "path": ["api","v1","users"]
+                    }
+                  }
+                },
+                {
+                  "name": "Get User by ID",
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+                    ],
+                    "url": {
+                      "raw": "{{ENDPOINT}}/api/v1/users/:id",
+                      "host": ["{{ENDPOINT}}"],
+                      "path": ["api","v1","users",":id"]
+                    }
+                  }
+                },
+                {
+                  "name": "Update User",
+                  "request": {
+                    "method": "PUT",
+                    "header": [
+                      { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+                      { "key": "Content-Type", "value": "application/json" }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Alice Updated\",\n  \"bio\": \"I love TwClone\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{ENDPOINT}}/api/v1/users/:id",
+                      "host": ["{{ENDPOINT}}"],
+                      "path": ["api","v1","users",":id"]
+                    }
+                  }
+                },
+                {
+                  "name": "Delete User",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [
+                      { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+                    ],
+                    "url": {
+                      "raw": "{{ENDPOINT}}/api/v1/users/:id",
+                      "host": ["{{ENDPOINT}}"],
+                      "path": ["api","v1","users",":id"]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
