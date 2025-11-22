@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 import { useForm } from "react-hook-form"
-import { email, z } from "zod"
+import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { metaData } from "@/content"
 
@@ -94,40 +94,9 @@ export default function Register() {
                                         </FormItem>
                                     )}
                                 />
-                                <div className="flex items-center justify-between">
-                                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <input type="checkbox" className="rounded" /> Remember me
-                                    </label>
-                                    <a href="#" className="text-sm text-blue-600 hover:underline">Forgot?</a>
-                                </div>
-                                <Button className="w-full mt-2" type="submit">Sign in</Button>
+                                <Button className="w-full mt-2" type="submit">Sign up</Button>
                             </form>
                         </Form>
-                        <div className="mt-6">
-                            <div className="relative">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-muted" />
-                                </div>
-                                <div className="relative flex justify-center text-sm">
-                                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                                </div>
-                            </div>
-                            <div className="mt-4 grid grid-cols-2 gap-3">
-                                <Button variant="secondary" className="w-full" type="button">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M23 3a10.9 10.9 0 01-3.14 1.53A4.48 4.48 0 0012 7v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5A4.5 4.5 0 0023 3z" fill="#1DA1F2" />
-                                    </svg>
-                                    <span>Twitter</span>
-                                </Button>
-                                <Button variant="secondary" className="w-full" type="button">
-                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M21 8v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                        <path d="M7 13l5-5 5 5" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    <span>GitHub</span>
-                                </Button>
-                            </div>
-                        </div>
                         <p className="mt-6 text-center text-sm text-muted-foreground">
                             Veteran in {metaData.title}?{' '}
                             <a href="/login" className="text-blue-600 hover:underline font-medium">Login to your account</a>
