@@ -1,8 +1,11 @@
 package repository
 
+// package repository
+
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"TWclone/internal/database"
 	"TWclone/internal/entity"
@@ -11,14 +14,27 @@ import (
 )
 
 var (
-	ERR_RECORD_NOT_FOUND = errors.New("record not found")
+	ErrRecordNotFound = errors.New("record not found")
+	// ErrDuplicate is returned when a unique constraint (duplicate key) is violated.
+	ErrDuplicate = errors.New("duplicate key")
 )
 
 type UserRepositoryImpl struct{}
 
 // Create inserts a new user.
 func (r UserRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
-	return database.DB.WithContext(ctx).Create(user).Error
+	result := database.DB.WithContext(ctx).Create(user)
+	if result.Error != nil {
+		// Postgres unique constraint errors typically include "duplicate key" or
+		// "unique constraint" in their error message. Use a string check here to avoid
+		// adding a dependency on pgconn.
+		errMsg := result.Error.Error()
+		if strings.Contains(errMsg, "duplicate key") || strings.Contains(errMsg, "unique constraint") {
+			return ErrDuplicate
+		}
+		return result.Error
+	}
+	return nil
 }
 
 // Delete removes a user by id.
@@ -42,7 +58,7 @@ func (r UserRepositoryImpl) FindByEmail(ctx context.Context, email string) (*ent
 	result := database.DB.WithContext(ctx).Where("email = ?", email).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, ERR_RECORD_NOT_FOUND
+			return nil, ErrRecordNotFound
 		}
 		return nil, result.Error
 	}
@@ -55,7 +71,7 @@ func (r UserRepositoryImpl) FindByUsername(ctx context.Context, username string)
 	result := database.DB.WithContext(ctx).Where("username = ?", username).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, ERR_RECORD_NOT_FOUND
+			return nil, ErrRecordNotFound
 		}
 		return nil, result.Error
 	}
@@ -68,7 +84,7 @@ func (r UserRepositoryImpl) FindByID(ctx context.Context, id int64) (*entity.Use
 	result := database.DB.WithContext(ctx).First(&user, id)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, ERR_RECORD_NOT_FOUND
+			return nil, ErrRecordNotFound
 		}
 		return nil, result.Error
 	}

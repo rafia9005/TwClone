@@ -29,13 +29,12 @@ func InitGorm(cfg *config.Config) (*gorm.DB, error) {
 		dbCfg.Sslmode,
 	)
 
-	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	gdb, err := gorm.Open(postgres.Open(dsn))
 	if err != nil {
 		logger.Log.Fatalf("failed to connect to gorm database: %v", err)
 		return nil, err
 	}
 
-	// Set package-level DB so repositories using database.DB won't be nil
 	DB = gdb
 
 	sqlDB, err := gdb.DB()
@@ -47,7 +46,17 @@ func InitGorm(cfg *config.Config) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(dbCfg.MaxOpenConn)
 	sqlDB.SetConnMaxLifetime(time.Duration(dbCfg.MaxConnLifetime) * time.Minute)
 
-	if err := gdb.AutoMigrate(&entity.User{}); err != nil {
+	if err := gdb.AutoMigrate(
+		&entity.User{},
+		&entity.Tweet{},
+		&entity.Follow{},
+		&entity.Like{},
+		&entity.Hashtag{},
+		&entity.TweetHashtag{},
+		&entity.Mention{},
+		&entity.Media{},
+		&entity.Notification{},
+	); err != nil {
 		logger.Log.Fatalf("failed to run automigrate: %v", err)
 		return nil, err
 	}

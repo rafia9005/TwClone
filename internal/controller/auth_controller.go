@@ -80,7 +80,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 	}
 
 	if err != nil {
-		if err == repository.ERR_RECORD_NOT_FOUND {
+		if err == repository.ErrRecordNotFound {
 			ctx.JSON(http.StatusUnauthorized, dto.WebResponse[any]{Message: "invalid credentials"})
 			return
 		}
@@ -133,6 +133,10 @@ func (c *AuthController) Register(ctx *gin.Context) {
 	}
 
 	if err := c.userRepo.Create(ctx, user); err != nil {
+		if err == repository.ErrDuplicate {
+			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{Message: "email or username already exists"})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed create user"})
 		return
 	}

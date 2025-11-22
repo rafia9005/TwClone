@@ -28,6 +28,7 @@ func (c *UserController) Route(r gin.IRouter) {
 	g.GET("/:id", c.FindByID)
 	g.PUT("/:id", c.Update)
 	g.DELETE("/:id", c.Delete)
+	g.GET("/token", c.UserToken)
 }
 
 type createUserReq struct {
@@ -75,6 +76,10 @@ func (c *UserController) Create(ctx *gin.Context) {
 	}
 
 	if err := c.repo.Create(ctx, user); err != nil {
+		if err == repository.ErrDuplicate {
+			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{Message: "email or username already exists"})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed create user"})
 		return
 	}
@@ -106,7 +111,7 @@ func (c *UserController) FindByID(ctx *gin.Context) {
 
 	user, err := c.repo.FindByID(ctx, id)
 	if err != nil {
-		if err == repository.ERR_RECORD_NOT_FOUND {
+		if err == repository.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, dto.WebResponse[any]{Message: "user not found"})
 			return
 		}
@@ -132,7 +137,7 @@ func (c *UserController) Update(ctx *gin.Context) {
 
 	user, err := c.repo.FindByID(ctx, id)
 	if err != nil {
-		if err == repository.ERR_RECORD_NOT_FOUND {
+		if err == repository.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, dto.WebResponse[any]{Message: "user not found"})
 			return
 		}
@@ -185,4 +190,20 @@ func (c *UserController) Delete(ctx *gin.Context) {
 		return
 	}
 	ctx.Status(http.StatusNoContent)
+}
+
+func (c *UserController) UserToken(ctx *gin.Context) {
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, dto.WebResponse[any]{Message: "unauthorized"})
+		return
+	}
+
+	user, err := c.repo.FindByID(ctx, userID.(int64))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch user"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Data: dto.FromEntity(user)})
 }
