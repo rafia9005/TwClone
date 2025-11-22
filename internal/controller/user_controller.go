@@ -76,8 +76,25 @@ func (c *UserController) Create(ctx *gin.Context) {
 	}
 
 	if err := c.repo.Create(ctx, user); err != nil {
+		if err.Error() == "duplicate_email" {
+			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
+				Message: "validation error",
+				Errors:  []dto.FieldError{{Field: "email", Message: "email already exists"}},
+			})
+			return
+		}
+		if err.Error() == "duplicate_username" {
+			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
+				Message: "validation error",
+				Errors:  []dto.FieldError{{Field: "username", Message: "username already exists"}},
+			})
+			return
+		}
 		if err == repository.ErrDuplicate {
-			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{Message: "email or username already exists"})
+			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
+				Message: "validation error",
+				Errors:  []dto.FieldError{{Field: "unknown", Message: "email or username already exists"}},
+			})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed create user"})

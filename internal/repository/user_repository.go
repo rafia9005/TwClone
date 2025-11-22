@@ -25,11 +25,15 @@ type UserRepositoryImpl struct{}
 func (r UserRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
 	result := database.DB.WithContext(ctx).Create(user)
 	if result.Error != nil {
-		// Postgres unique constraint errors typically include "duplicate key" or
-		// "unique constraint" in their error message. Use a string check here to avoid
-		// adding a dependency on pgconn.
 		errMsg := result.Error.Error()
 		if strings.Contains(errMsg, "duplicate key") || strings.Contains(errMsg, "unique constraint") {
+			// Try to detect which field is duplicated
+			if strings.Contains(errMsg, "email") {
+				return errors.New("duplicate_email")
+			}
+			if strings.Contains(errMsg, "username") {
+				return errors.New("duplicate_username")
+			}
 			return ErrDuplicate
 		}
 		return result.Error
