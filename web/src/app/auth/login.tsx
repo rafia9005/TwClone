@@ -6,6 +6,10 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
+
+import Fetch from "@/lib/fetch"
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { metaData } from "@/content"
 
 
@@ -17,11 +21,34 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>
 
 export default function Login() {
+
+  const navigate = useNavigate()
+  const [apiError, setApiError] = useState<string | null>(null)
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { identifier: "", password: "" },
     mode: "onTouched",
   })
+
+  async function onSubmit(values: LoginValues) {
+    setApiError(null)
+    try {
+      const payload: any = { password: values.password }
+      if (values.identifier.includes("@")) {
+        payload.email = values.identifier
+      } else {
+        payload.username = values.identifier
+      }
+      const res = await Fetch.post("/auth/login", payload)
+      // Simpan token jika ada
+      if (res.data?.data?.token) {
+        document.cookie = `accessToken=${res.data.data.token}; path=/`
+        navigate("/")
+      }
+    } catch (err: any) {
+      setApiError(err?.response?.data?.message || "Login failed")
+    }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -36,7 +63,10 @@ export default function Login() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form className="space-y-4" onSubmit={form.handleSubmit(() => {})}>
+              <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+                {apiError && (
+                  <div className="mb-2 text-sm text-red-600 text-center">{apiError}</div>
+                )}
                 <FormField
                   control={form.control}
                   name="identifier"

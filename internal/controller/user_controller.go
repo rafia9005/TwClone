@@ -10,7 +10,32 @@ import (
 	"TWclone/internal/repository"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
+
+// extractFieldErrors parses validator.ValidationErrors to []dto.FieldError
+func extractFieldErrors(err error, structPrefix string) []dto.FieldError {
+	var fieldErrors []dto.FieldError
+	if verrs, ok := err.(validator.ValidationErrors); ok {
+		for _, verr := range verrs {
+			field := verr.Field()
+			// Remove struct prefix if present
+			if structPrefix != "" && len(field) > len(structPrefix) && field[:len(structPrefix)] == structPrefix {
+				field = field[len(structPrefix):]
+			}
+			fieldErrors = append(fieldErrors, dto.FieldError{
+				Field:   field,
+				Message: verr.Error(),
+			})
+		}
+	} else {
+		// fallback: try to parse error string
+		msg := err.Error()
+		field := "body"
+		fieldErrors = append(fieldErrors, dto.FieldError{Field: field, Message: msg})
+	}
+	return fieldErrors
+}
 
 // UserController handles user CRUD.
 type UserController struct {
@@ -23,8 +48,8 @@ func NewUserController() *UserController {
 
 func (c *UserController) Route(r gin.IRouter) {
 	g := r.Group("/users")
-	g.POST("/", c.Create)
-	g.GET("/", c.FindAll)
+	g.POST("", c.Create)
+	g.GET("", c.FindAll)
 	g.GET("/:id", c.FindByID)
 	g.PUT("/:id", c.Update)
 	g.DELETE("/:id", c.Delete)
@@ -53,7 +78,7 @@ type updateUserReq struct {
 func (c *UserController) Create(ctx *gin.Context) {
 	var req createUserReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: []dto.FieldError{{Field: "body", Message: err.Error()}}})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "createUserReq")})
 		return
 	}
 
@@ -148,7 +173,7 @@ func (c *UserController) Update(ctx *gin.Context) {
 
 	var req updateUserReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: []dto.FieldError{{Field: "body", Message: err.Error()}}})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "updateUserReq")})
 		return
 	}
 

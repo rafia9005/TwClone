@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"TWclone/internal/dto"
 	"TWclone/internal/entity"
 	"TWclone/internal/repository"
 	"context"
@@ -19,15 +20,15 @@ func NewHashtagController() *HashtagController {
 
 func (c *HashtagController) Route(r gin.IRouter) {
 	g := r.Group("/hashtags")
-	g.POST("/", c.Create)
-	g.GET("/", c.FindAll)
+	g.POST("", c.Create)
+	g.GET("", c.FindAll)
 	g.GET("/:tag", c.FindByTag)
 }
 
 func (c *HashtagController) Create(ctx *gin.Context) {
 	var hashtag entity.Hashtag
 	if err := ctx.ShouldBindJSON(&hashtag); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Hashtag")})
 		return
 	}
 	if err := c.repo.Create(context.Background(), &hashtag); err != nil {

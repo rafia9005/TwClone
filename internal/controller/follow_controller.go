@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"TWclone/internal/dto"
 	"TWclone/internal/entity"
 	"TWclone/internal/repository"
 	"context"
@@ -20,8 +21,8 @@ func NewFollowController() *FollowController {
 
 func (c *FollowController) Route(r gin.IRouter) {
 	g := r.Group("/follows")
-	g.POST("/", c.Create)
-	g.DELETE("/", c.Delete)
+	g.POST("", c.Create)
+	g.DELETE("", c.Delete)
 	g.GET("/followers/:id", c.Followers)
 	g.GET("/following/:id", c.Following)
 }
@@ -29,7 +30,7 @@ func (c *FollowController) Route(r gin.IRouter) {
 func (c *FollowController) Create(ctx *gin.Context) {
 	var follow entity.Follow
 	if err := ctx.ShouldBindJSON(&follow); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Follow")})
 		return
 	}
 	if err := c.repo.Create(context.Background(), &follow); err != nil {

@@ -13,6 +13,17 @@ services:
     networks:
       - twclone-network
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: TwClonePgAdmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@twclone.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    networks:
+      - twclone-network
+
 networks:
   twclone-network:
     driver: bridge

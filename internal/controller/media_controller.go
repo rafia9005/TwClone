@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"TWclone/internal/dto"
 	"TWclone/internal/entity"
 	"TWclone/internal/repository"
 	"context"
@@ -20,7 +21,7 @@ func NewMediaController() *MediaController {
 
 func (c *MediaController) Route(r gin.IRouter) {
 	g := r.Group("/media")
-	g.POST("/", c.Create)
+	g.POST("", c.Create)
 	g.GET("/tweet/:tweet_id", c.ByTweet)
 	g.GET("/:id", c.ByID)
 }
@@ -28,7 +29,7 @@ func (c *MediaController) Route(r gin.IRouter) {
 func (c *MediaController) Create(ctx *gin.Context) {
 	var media entity.Media
 	if err := ctx.ShouldBindJSON(&media); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Media")})
 		return
 	}
 	if err := c.repo.Create(context.Background(), &media); err != nil {

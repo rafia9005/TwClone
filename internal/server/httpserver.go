@@ -79,10 +79,12 @@ func RegisterMiddleware(router *gin.Engine, cfg *config.Config) {
 		middleware.ErrorHandler(),
 		middleware.RequestTimeout(cfg),
 		cors.New(cors.Config{
-			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+			AllowOrigins:     []string{"*"},
+			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"},
 			AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
-			AllowAllOrigins:  true,
+			ExposeHeaders:    []string{"Content-Length"},
 			AllowCredentials: true,
+			MaxAge:           12 * time.Hour,
 		}),
 		gin.Recovery(),
 	}

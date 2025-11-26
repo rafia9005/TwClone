@@ -64,7 +64,7 @@ type registerRequest struct {
 func (c *AuthController) Login(ctx *gin.Context) {
 	var req loginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: []dto.FieldError{{Field: "body", Message: err.Error()}}})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "loginRequest")})
 		return
 	}
 
@@ -111,7 +111,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 func (c *AuthController) Register(ctx *gin.Context) {
 	var req registerRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: []dto.FieldError{{Field: "body", Message: err.Error()}}})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "registerRequest")})
 		return
 	}
 

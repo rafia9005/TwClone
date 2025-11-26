@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"TWclone/internal/dto"
 	"TWclone/internal/entity"
 	"TWclone/internal/repository"
 	"context"
@@ -20,7 +21,7 @@ func NewNotificationController() *NotificationController {
 
 func (c *NotificationController) Route(r gin.IRouter) {
 	g := r.Group("/notifications")
-	g.POST("/", c.Create)
+	g.POST("", c.Create)
 	g.GET("/recipient/:recipient_id", c.ByRecipient)
 	g.PUT("/:id/read", c.MarkAsRead)
 }
@@ -28,7 +29,7 @@ func (c *NotificationController) Route(r gin.IRouter) {
 func (c *NotificationController) Create(ctx *gin.Context) {
 	var notif entity.Notification
 	if err := ctx.ShouldBindJSON(&notif); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Notification")})
 		return
 	}
 	if err := c.repo.Create(context.Background(), &notif); err != nil {

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"TWclone/internal/dto"
 	"TWclone/internal/entity"
 	"TWclone/internal/repository"
 	"context"
@@ -20,7 +21,7 @@ func NewMentionController() *MentionController {
 
 func (c *MentionController) Route(r gin.IRouter) {
 	g := r.Group("/mentions")
-	g.POST("/", c.Create)
+	g.POST("", c.Create)
 	g.GET("/tweet/:tweet_id", c.ByTweet)
 	g.GET("/user/:user_id", c.ByUser)
 }
@@ -28,7 +29,7 @@ func (c *MentionController) Route(r gin.IRouter) {
 func (c *MentionController) Create(ctx *gin.Context) {
 	var mention entity.Mention
 	if err := ctx.ShouldBindJSON(&mention); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Mention")})
 		return
 	}
 	if err := c.repo.Create(context.Background(), &mention); err != nil {

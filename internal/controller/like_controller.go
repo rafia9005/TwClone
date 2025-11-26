@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"TWclone/internal/dto"
 	"TWclone/internal/entity"
 	"TWclone/internal/repository"
 	"context"
@@ -20,8 +21,8 @@ func NewLikeController() *LikeController {
 
 func (c *LikeController) Route(r gin.IRouter) {
 	g := r.Group("/likes")
-	g.POST("/", c.Create)
-	g.DELETE("/", c.Delete)
+	g.POST("", c.Create)
+	g.DELETE("", c.Delete)
 	g.GET("/tweet/:tweet_id", c.ByTweet)
 	g.GET("/user/:user_id", c.ByUser)
 }
@@ -29,7 +30,7 @@ func (c *LikeController) Route(r gin.IRouter) {
 func (c *LikeController) Create(ctx *gin.Context) {
 	var like entity.Like
 	if err := ctx.ShouldBindJSON(&like); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Like")})
 		return
 	}
 	if err := c.repo.Create(context.Background(), &like); err != nil {
