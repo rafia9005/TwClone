@@ -53,7 +53,6 @@ func (c *UserController) Route(r gin.IRouter) {
 	g.GET("/:id", c.FindByID)
 	g.PUT("/:id", c.Update)
 	g.DELETE("/:id", c.Delete)
-	g.GET("/token", c.UserToken)
 }
 
 type createUserReq struct {
@@ -75,6 +74,17 @@ type updateUserReq struct {
 	Password *string `json:"password"`
 }
 
+// CreateUser godoc
+// @Summary Create user
+// @Description Create a new user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body createUserReq true "Create user payload"
+// @Success 201 {object} dto.WebResponse
+// @Failure 400 {object} dto.WebResponse
+// @Failure 409 {object} dto.WebResponse
+// @Router /api/v1/users [post]
 func (c *UserController) Create(ctx *gin.Context) {
 	var req createUserReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -129,6 +139,14 @@ func (c *UserController) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, dto.WebResponse[dto.UserResponse]{Message: "created", Data: dto.FromEntity(user)})
 }
 
+// ListUsers godoc
+// @Summary List users
+// @Description Get list of users
+// @Tags users
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.WebResponse
+// @Router /api/v1/users [get]
 func (c *UserController) FindAll(ctx *gin.Context) {
 	users, err := c.repo.FindAll(ctx)
 	if err != nil {
@@ -143,6 +161,17 @@ func (c *UserController) FindAll(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.WebResponse[any]{Data: resp})
 }
 
+// GetUser godoc
+// @Summary Get user by id
+// @Description Get a user by its ID
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 200 {object} dto.WebResponse
+// @Failure 400 {object} dto.WebResponse
+// @Failure 404 {object} dto.WebResponse
+// @Router /api/v1/users/{id} [get]
 func (c *UserController) FindByID(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -163,6 +192,18 @@ func (c *UserController) FindByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Data: dto.FromEntity(user)})
 }
 
+// UpdateUser godoc
+// @Summary Update user
+// @Description Update a user's information
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param user body updateUserReq true "Update payload"
+// @Success 200 {object} dto.WebResponse
+// @Failure 400 {object} dto.WebResponse
+// @Failure 404 {object} dto.WebResponse
+// @Router /api/v1/users/{id} [put]
 func (c *UserController) Update(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -219,6 +260,17 @@ func (c *UserController) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Message: "updated", Data: dto.FromEntity(user)})
 }
 
+// DeleteUser godoc
+// @Summary Delete user
+// @Description Delete a user by ID
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 204 {object} dto.WebResponse
+// @Failure 400 {object} dto.WebResponse
+// @Failure 404 {object} dto.WebResponse
+// @Router /api/v1/users/{id} [delete]
 func (c *UserController) Delete(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -234,6 +286,15 @@ func (c *UserController) Delete(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
+// GetUserToken godoc
+// @Summary Get current user
+// @Description Get current authenticated user's info via token
+// @Tags users
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.WebResponse
+// @Failure 401 {object} dto.WebResponse
+// @Router /api/v1/users/token [get]
 func (c *UserController) UserToken(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {

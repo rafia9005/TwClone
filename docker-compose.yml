@@ -10,6 +10,9 @@ services:
       POSTGRES_DB: twclonedb
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
     networks:
       - twclone-network
 
@@ -21,9 +24,16 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "8080:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    restart: unless-stopped
     networks:
       - twclone-network
 
 networks:
   twclone-network:
     driver: bridge
+
+volumes:
+  pgdata:
+  pgadmin-data:

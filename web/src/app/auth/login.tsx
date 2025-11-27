@@ -9,8 +9,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 
 import Fetch from "@/lib/fetch"
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { metaData } from "@/content"
+import Cookies from "js-cookie"
 
 
 const loginSchema = z.object({
@@ -22,7 +22,6 @@ type LoginValues = z.infer<typeof loginSchema>
 
 export default function Login() {
 
-  const navigate = useNavigate()
   const [apiError, setApiError] = useState<string | null>(null)
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -42,8 +41,8 @@ export default function Login() {
       const res = await Fetch.post("/auth/login", payload)
       // Simpan token jika ada
       if (res.data?.data?.token) {
-        document.cookie = `accessToken=${res.data.data.token}; path=/`
-        navigate("/")
+        Cookies.set("accessToken", res.data.data.token, { path: "/" })
+        location.href = "/"
       }
     } catch (err: any) {
       setApiError(err?.response?.data?.message || "Login failed")

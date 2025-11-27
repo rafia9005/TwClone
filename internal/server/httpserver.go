@@ -79,7 +79,13 @@ func RegisterMiddleware(router *gin.Engine, cfg *config.Config) {
 		middleware.ErrorHandler(),
 		middleware.RequestTimeout(cfg),
 		cors.New(cors.Config{
-			AllowOrigins:     []string{"*"},
+			// When AllowCredentials is true the Access-Control-Allow-Origin header
+			// must not be "*". Use AllowOriginFunc to echo and allow the request
+			// origin. This is safe for development; in production you should
+			// validate origins explicitly.
+			AllowOriginFunc: func(origin string) bool {
+				return true
+			},
 			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"},
 			AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 			ExposeHeaders:    []string{"Content-Length"},

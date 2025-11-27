@@ -38,6 +38,36 @@ func (c *HashtagController) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, hashtag)
 }
 
+// CreateHashtag godoc
+// @Summary Create hashtag
+// @Description Create a new hashtag
+// @Tags hashtags
+// @Accept json
+// @Produce json
+// @Param hashtag body entity.Hashtag true "Hashtag payload"
+// @Success 201 {object} entity.Hashtag
+// @Failure 400 {object} dto.WebResponse
+// @Router /api/v1/hashtags [post]
+
+// ListHashtags godoc
+// @Summary List hashtags
+// @Description Get all hashtags
+// @Tags hashtags
+// @Accept json
+// @Produce json
+// @Success 200 {array} entity.Hashtag
+// @Router /api/v1/hashtags [get]
+
+// GetHashtagByTag godoc
+// @Summary Get hashtag
+// @Description Get hashtag by tag
+// @Tags hashtags
+// @Accept json
+// @Produce json
+// @Param tag path string true "Tag"
+// @Success 200 {object} entity.Hashtag
+// @Router /api/v1/hashtags/{tag} [get]
+
 func (c *HashtagController) FindByTag(ctx *gin.Context) {
 	tag := ctx.Param("tag")
 	hashtag, err := c.repo.FindByTag(context.Background(), tag)

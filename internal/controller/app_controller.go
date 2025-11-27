@@ -28,6 +28,14 @@ func (c *AppController) Health(ctx *gin.Context) {
 	})
 }
 
+// @Summary Health check
+// @Description Returns API health status
+// @Tags health
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.WebResponse
+// @Router /api/v1/health [get]
+
 func (c *AppController) RouteNotFound(ctx *gin.Context) {
 	ctx.JSON(http.StatusNotFound, dto.WebResponse[any]{
 		Message: "route not found",
@@ -45,3 +53,11 @@ func (c *AppController) Index(ctx *gin.Context) {
 		Message: "TWClone API's is ready to use!",
 	})
 }
+
+// @Summary API index
+// @Description API root information
+// @Tags root
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.WebResponse
+// @Router /api/v1/ [get]

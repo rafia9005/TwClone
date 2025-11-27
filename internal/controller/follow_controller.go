@@ -40,6 +40,49 @@ func (c *FollowController) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, follow)
 }
 
+// CreateFollow godoc
+// @Summary Create follow
+// @Description Follow a user
+// @Tags follows
+// @Accept json
+// @Produce json
+// @Param follow body entity.Follow true "Follow payload"
+// @Success 201 {object} entity.Follow
+// @Failure 400 {object} dto.WebResponse
+// @Router /api/v1/follows [post]
+
+// DeleteFollow godoc
+// @Summary Unfollow
+// @Description Unfollow a user
+// @Tags follows
+// @Accept json
+// @Produce json
+// @Param follower_id query int true "Follower ID"
+// @Param following_id query int true "Following ID"
+// @Success 200 {object} dto.WebResponse
+// @Failure 400 {object} dto.WebResponse
+// @Router /api/v1/follows [delete]
+
+// GetFollowers godoc
+// @Summary Get followers
+// @Description Get followers of a user
+// @Tags follows
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 200 {array} entity.Follow
+// @Router /api/v1/follows/followers/{id} [get]
+
+// GetFollowing godoc
+// @Summary Get following
+// @Description Get users followed by a user
+// @Tags follows
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 200 {array} entity.Follow
+// @Router /api/v1/follows/following/{id} [get]
+
 func (c *FollowController) Delete(ctx *gin.Context) {
 	followerID, _ := strconv.ParseInt(ctx.Query("follower_id"), 10, 64)
 	followingID, _ := strconv.ParseInt(ctx.Query("following_id"), 10, 64)

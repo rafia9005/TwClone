@@ -39,6 +39,37 @@ func (c *NotificationController) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, notif)
 }
 
+// CreateNotification godoc
+// @Summary Create notification
+// @Description Create a notification for a recipient
+// @Tags notifications
+// @Accept json
+// @Produce json
+// @Param notification body entity.Notification true "Notification payload"
+// @Success 201 {object} entity.Notification
+// @Failure 400 {object} dto.WebResponse
+// @Router /api/v1/notifications [post]
+
+// GetNotificationsByRecipient godoc
+// @Summary Notifications by recipient
+// @Description Get notifications for a recipient
+// @Tags notifications
+// @Accept json
+// @Produce json
+// @Param recipient_id path int true "Recipient ID"
+// @Success 200 {array} entity.Notification
+// @Router /api/v1/notifications/recipient/{recipient_id} [get]
+
+// MarkNotificationAsRead godoc
+// @Summary Mark notification as read
+// @Description Mark a notification as read by id
+// @Tags notifications
+// @Accept json
+// @Produce json
+// @Param id path int true "Notification ID"
+// @Success 200 {object} dto.WebResponse
+// @Router /api/v1/notifications/{id}/read [put]
+
 func (c *NotificationController) ByRecipient(ctx *gin.Context) {
 	recipientID, _ := strconv.ParseInt(ctx.Param("recipient_id"), 10, 64)
 	notifs, err := c.repo.FindByRecipientID(context.Background(), recipientID)

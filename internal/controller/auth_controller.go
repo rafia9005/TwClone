@@ -61,6 +61,17 @@ type registerRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// Login godoc
+// @Summary Login
+// @Description Authenticate user with email or username and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param login body loginRequest true "Login payload"
+// @Success 200 {object} dto.WebResponse
+// @Failure 400 {object} dto.WebResponse
+// @Failure 401 {object} dto.WebResponse
+// @Router /api/v1/auth/login [post]
 func (c *AuthController) Login(ctx *gin.Context) {
 	var req loginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -108,6 +119,17 @@ func (c *AuthController) Login(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.WebResponse[any]{Data: gin.H{"token": token, "user": userDTO}})
 }
 
+// Register godoc
+// @Summary Register
+// @Description Register a new user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param register body registerRequest true "Register payload"
+// @Success 201 {object} dto.WebResponse
+// @Failure 400 {object} dto.WebResponse
+// @Failure 409 {object} dto.WebResponse
+// @Router /api/v1/auth/register [post]
 func (c *AuthController) Register(ctx *gin.Context) {
 	var req registerRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {

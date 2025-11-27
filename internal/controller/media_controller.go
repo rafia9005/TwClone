@@ -39,6 +39,37 @@ func (c *MediaController) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, media)
 }
 
+// CreateMedia godoc
+// @Summary Create media
+// @Description Upload or register media for a tweet
+// @Tags media
+// @Accept json
+// @Produce json
+// @Param media body entity.Media true "Media payload"
+// @Success 201 {object} entity.Media
+// @Failure 400 {object} dto.WebResponse
+// @Router /api/v1/media [post]
+
+// GetMediaByTweet godoc
+// @Summary Media by tweet
+// @Description Get media for a tweet
+// @Tags media
+// @Accept json
+// @Produce json
+// @Param tweet_id path int true "Tweet ID"
+// @Success 200 {array} entity.Media
+// @Router /api/v1/media/tweet/{tweet_id} [get]
+
+// GetMediaByID godoc
+// @Summary Get media
+// @Description Get media by id
+// @Tags media
+// @Accept json
+// @Produce json
+// @Param id path int true "Media ID"
+// @Success 200 {object} entity.Media
+// @Router /api/v1/media/{id} [get]
+
 func (c *MediaController) ByTweet(ctx *gin.Context) {
 	tweetID, _ := strconv.ParseInt(ctx.Param("tweet_id"), 10, 64)
 	media, err := c.repo.FindByTweetID(context.Background(), tweetID)

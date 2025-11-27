@@ -39,6 +39,37 @@ func (c *MentionController) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, mention)
 }
 
+// CreateMention godoc
+// @Summary Create mention
+// @Description Create a mention for a tweet
+// @Tags mentions
+// @Accept json
+// @Produce json
+// @Param mention body entity.Mention true "Mention payload"
+// @Success 201 {object} entity.Mention
+// @Failure 400 {object} dto.WebResponse
+// @Router /api/v1/mentions [post]
+
+// GetMentionsByTweet godoc
+// @Summary Mentions by tweet
+// @Description Get mentions for a tweet
+// @Tags mentions
+// @Accept json
+// @Produce json
+// @Param tweet_id path int true "Tweet ID"
+// @Success 200 {array} entity.Mention
+// @Router /api/v1/mentions/tweet/{tweet_id} [get]
+
+// GetMentionsByUser godoc
+// @Summary Mentions by user
+// @Description Get mentions of a user
+// @Tags mentions
+// @Accept json
+// @Produce json
+// @Param user_id path int true "User ID"
+// @Success 200 {array} entity.Mention
+// @Router /api/v1/mentions/user/{user_id} [get]
+
 func (c *MentionController) ByTweet(ctx *gin.Context) {
 	tweetID, _ := strconv.ParseInt(ctx.Param("tweet_id"), 10, 64)
 	mentions, err := c.repo.FindByTweetID(context.Background(), tweetID)
