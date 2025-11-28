@@ -31,12 +31,18 @@ export function useAuth() {
   return ctx
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children, initialUser }: { children: ReactNode; initialUser?: User | null }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (initialUser) {
+      setUser(initialUser)
+      setLoading(false)
+      refresh()
+      return
+    }
     refresh()
   }, [])
 
@@ -51,13 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false)
         return
       }
-      // backend exposes token info at GET /users/token
-      const res = await Fetch.get("/users/token", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      })
-      // axios throws for non-2xx, so successful response lands here
+      const res = await Fetch.get("/users/token")
       setUser(res.data.data)
     } catch (err: any) {
       setUser(null)
