@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"TWclone/internal/pkg/constant"
+	"TwClone/internal/pkg/constant"
 )
 
 func NewTimeoutError() *ResponseError {

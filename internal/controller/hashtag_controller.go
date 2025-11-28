@@ -1,13 +1,14 @@
 package controller
 
 import (
-	"TWclone/internal/dto"
-	"TWclone/internal/entity"
-	"TWclone/internal/repository"
 	"context"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"TwClone/internal/dto"
+	"TwClone/internal/entity"
+	"TwClone/internal/repository"
+
+	"github.com/labstack/echo/v4"
 )
 
 type HashtagController struct {
@@ -18,24 +19,22 @@ func NewHashtagController() *HashtagController {
 	return &HashtagController{repo: repository.HashtagRepositoryImpl{}}
 }
 
-func (c *HashtagController) Route(r gin.IRouter) {
-	g := r.Group("/hashtags")
-	g.POST("", c.Create)
-	g.GET("", c.FindAll)
-	g.GET("/:tag", c.FindByTag)
+func (c *HashtagController) Route(g *echo.Group) {
+	hg := g.Group("/hashtags")
+	hg.POST("", c.Create)
+	hg.GET("", c.FindAll)
+	hg.GET("/:tag", c.FindByTag)
 }
 
-func (c *HashtagController) Create(ctx *gin.Context) {
+func (c *HashtagController) Create(ctx echo.Context) error {
 	var hashtag entity.Hashtag
-	if err := ctx.ShouldBindJSON(&hashtag); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Hashtag")})
-		return
+	if err := ctx.Bind(&hashtag); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Hashtag")})
 	}
 	if err := c.repo.Create(context.Background(), &hashtag); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusCreated, hashtag)
+	return ctx.JSON(http.StatusCreated, hashtag)
 }
 
 // CreateHashtag godoc
@@ -68,21 +67,19 @@ func (c *HashtagController) Create(ctx *gin.Context) {
 // @Success 200 {object} entity.Hashtag
 // @Router /api/v1/hashtags/{tag} [get]
 
-func (c *HashtagController) FindByTag(ctx *gin.Context) {
+func (c *HashtagController) FindByTag(ctx echo.Context) error {
 	tag := ctx.Param("tag")
 	hashtag, err := c.repo.FindByTag(context.Background(), tag)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-		return
+		return ctx.JSON(http.StatusNotFound, dto.WebResponse[any]{Message: "not found"})
 	}
-	ctx.JSON(http.StatusOK, hashtag)
+	return ctx.JSON(http.StatusOK, hashtag)
 }
 
-func (c *HashtagController) FindAll(ctx *gin.Context) {
+func (c *HashtagController) FindAll(ctx echo.Context) error {
 	hashtags, err := c.repo.FindAll(context.Background())
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, hashtags)
+	return ctx.JSON(http.StatusOK, hashtags)
 }

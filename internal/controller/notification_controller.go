@@ -1,14 +1,14 @@
 package controller
 
 import (
-	"TWclone/internal/dto"
-	"TWclone/internal/entity"
-	"TWclone/internal/repository"
+	"TwClone/internal/dto"
+	"TwClone/internal/entity"
+	"TwClone/internal/repository"
 	"context"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type NotificationController struct {
@@ -19,24 +19,11 @@ func NewNotificationController() *NotificationController {
 	return &NotificationController{repo: repository.NotificationRepositoryImpl{}}
 }
 
-func (c *NotificationController) Route(r gin.IRouter) {
-	g := r.Group("/notifications")
-	g.POST("", c.Create)
-	g.GET("/recipient/:recipient_id", c.ByRecipient)
-	g.PUT("/:id/read", c.MarkAsRead)
-}
-
-func (c *NotificationController) Create(ctx *gin.Context) {
-	var notif entity.Notification
-	if err := ctx.ShouldBindJSON(&notif); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Notification")})
-		return
-	}
-	if err := c.repo.Create(context.Background(), &notif); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusCreated, notif)
+func (c *NotificationController) Route(g *echo.Group) {
+	ng := g.Group("/notifications")
+	ng.POST("", c.Create)
+	ng.GET("/recipient/:recipient_id", c.ByRecipient)
+	ng.PUT("/:id/read", c.MarkAsRead)
 }
 
 // CreateNotification godoc
@@ -49,6 +36,16 @@ func (c *NotificationController) Create(ctx *gin.Context) {
 // @Success 201 {object} entity.Notification
 // @Failure 400 {object} dto.WebResponse
 // @Router /api/v1/notifications [post]
+func (c *NotificationController) Create(ctx echo.Context) error {
+	var notif entity.Notification
+	if err := ctx.Bind(&notif); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Notification")})
+	}
+	if err := c.repo.Create(context.Background(), &notif); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
+	}
+	return ctx.JSON(http.StatusCreated, notif)
+}
 
 // GetNotificationsByRecipient godoc
 // @Summary Notifications by recipient
@@ -59,6 +56,14 @@ func (c *NotificationController) Create(ctx *gin.Context) {
 // @Param recipient_id path int true "Recipient ID"
 // @Success 200 {array} entity.Notification
 // @Router /api/v1/notifications/recipient/{recipient_id} [get]
+func (c *NotificationController) ByRecipient(ctx echo.Context) error {
+	recipientID, _ := strconv.ParseInt(ctx.Param("recipient_id"), 10, 64)
+	notifs, err := c.repo.FindByRecipientID(context.Background(), recipientID)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, notifs)
+}
 
 // MarkNotificationAsRead godoc
 // @Summary Mark notification as read
@@ -69,22 +74,10 @@ func (c *NotificationController) Create(ctx *gin.Context) {
 // @Param id path int true "Notification ID"
 // @Success 200 {object} dto.WebResponse
 // @Router /api/v1/notifications/{id}/read [put]
-
-func (c *NotificationController) ByRecipient(ctx *gin.Context) {
-	recipientID, _ := strconv.ParseInt(ctx.Param("recipient_id"), 10, 64)
-	notifs, err := c.repo.FindByRecipientID(context.Background(), recipientID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, notifs)
-}
-
-func (c *NotificationController) MarkAsRead(ctx *gin.Context) {
+func (c *NotificationController) MarkAsRead(ctx echo.Context) error {
 	id, _ := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	if err := c.repo.MarkAsRead(context.Background(), id); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "marked as read"})
+	return ctx.JSON(http.StatusOK, echo.Map{"message": "marked as read"})
 }

@@ -4,8 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"TWclone/internal/config"
-
+	"TwClone/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )

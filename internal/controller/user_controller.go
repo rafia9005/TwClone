@@ -4,38 +4,14 @@ import (
 	"net/http"
 	"strconv"
 
-	"TWclone/internal/dto"
-	"TWclone/internal/entity"
-	"TWclone/internal/pkg/utils/encryptutils"
-	"TWclone/internal/repository"
+	"TwClone/internal/dto"
+	"TwClone/internal/entity"
+	"TwClone/internal/middleware"
+	"TwClone/internal/pkg/utils/encryptutils"
+	"TwClone/internal/repository"
 
-	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
+	"github.com/labstack/echo/v4"
 )
-
-// extractFieldErrors parses validator.ValidationErrors to []dto.FieldError
-func extractFieldErrors(err error, structPrefix string) []dto.FieldError {
-	var fieldErrors []dto.FieldError
-	if verrs, ok := err.(validator.ValidationErrors); ok {
-		for _, verr := range verrs {
-			field := verr.Field()
-			// Remove struct prefix if present
-			if structPrefix != "" && len(field) > len(structPrefix) && field[:len(structPrefix)] == structPrefix {
-				field = field[len(structPrefix):]
-			}
-			fieldErrors = append(fieldErrors, dto.FieldError{
-				Field:   field,
-				Message: verr.Error(),
-			})
-		}
-	} else {
-		// fallback: try to parse error string
-		msg := err.Error()
-		field := "body"
-		fieldErrors = append(fieldErrors, dto.FieldError{Field: field, Message: msg})
-	}
-	return fieldErrors
-}
 
 // UserController handles user CRUD.
 type UserController struct {
@@ -46,23 +22,24 @@ func NewUserController() *UserController {
 	return &UserController{repo: repository.UserRepositoryImpl{}}
 }
 
-func (c *UserController) Route(r gin.IRouter) {
-	g := r.Group("/users")
-	g.POST("", c.Create)
-	g.GET("", c.FindAll)
-	g.GET("/:id", c.FindByID)
-	g.PUT("/:id", c.Update)
-	g.DELETE("/:id", c.Delete)
+func (c *UserController) Route(g *echo.Group) {
+	ug := g.Group("/users", middleware.AuthMiddleware())
+	ug.POST("", c.Create)
+	ug.GET("", c.FindAll)
+	ug.GET("/token", c.UserToken)
+	ug.GET("/:id", c.FindByID)
+	ug.PUT("/:id", c.Update)
+	ug.DELETE("/:id", c.Delete)
 }
 
 type createUserReq struct {
-	Email    string `json:"email" binding:"required,email"`
+	Email    string `json:"email" validate:"required,email"`
 	Name     string `json:"name"`
-	Username string `json:"username" binding:"required"`
+	Username string `json:"username" validate:"required"`
 	Avatar   string `json:"avatar"`
 	Banner   string `json:"banner"`
 	Bio      string `json:"bio"`
-	Password string `json:"password" binding:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type updateUserReq struct {
@@ -85,19 +62,17 @@ type updateUserReq struct {
 // @Failure 400 {object} dto.WebResponse
 // @Failure 409 {object} dto.WebResponse
 // @Router /api/v1/users [post]
-func (c *UserController) Create(ctx *gin.Context) {
+func (c *UserController) Create(ctx echo.Context) error {
 	var req createUserReq
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "createUserReq")})
-		return
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "createUserReq")})
 	}
 
 	// hash password before storing
 	enc := encryptutils.NewBcryptEncryptor(10)
 	hashed, err := enc.Hash(req.Password)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to hash password"})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to hash password"})
 	}
 
 	user := &entity.User{
@@ -110,33 +85,29 @@ func (c *UserController) Create(ctx *gin.Context) {
 		Password: hashed,
 	}
 
-	if err := c.repo.Create(ctx, user); err != nil {
+	if err := c.repo.Create(ctx.Request().Context(), user); err != nil {
 		if err.Error() == "duplicate_email" {
-			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
+			return ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
 				Message: "validation error",
 				Errors:  []dto.FieldError{{Field: "email", Message: "email already exists"}},
 			})
-			return
 		}
 		if err.Error() == "duplicate_username" {
-			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
+			return ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
 				Message: "validation error",
 				Errors:  []dto.FieldError{{Field: "username", Message: "username already exists"}},
 			})
-			return
 		}
 		if err == repository.ErrDuplicate {
-			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
+			return ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
 				Message: "validation error",
 				Errors:  []dto.FieldError{{Field: "unknown", Message: "email or username already exists"}},
 			})
-			return
 		}
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed create user"})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed create user"})
 	}
 
-	ctx.JSON(http.StatusCreated, dto.WebResponse[dto.UserResponse]{Message: "created", Data: dto.FromEntity(user)})
+	return ctx.JSON(http.StatusCreated, dto.WebResponse[dto.UserResponse]{Message: "created", Data: dto.FromEntity(user)})
 }
 
 // ListUsers godoc
@@ -147,18 +118,17 @@ func (c *UserController) Create(ctx *gin.Context) {
 // @Produce json
 // @Success 200 {object} dto.WebResponse
 // @Router /api/v1/users [get]
-func (c *UserController) FindAll(ctx *gin.Context) {
-	users, err := c.repo.FindAll(ctx)
+func (c *UserController) FindAll(ctx echo.Context) error {
+	users, err := c.repo.FindAll(ctx.Request().Context())
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch users"})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch users"})
 	}
 	// convert to response DTOs to avoid leaking password
 	resp := make([]dto.UserResponse, 0, len(users))
 	for _, u := range users {
 		resp = append(resp, dto.FromEntity(u))
 	}
-	ctx.JSON(http.StatusOK, dto.WebResponse[any]{Data: resp})
+	return ctx.JSON(http.StatusOK, dto.WebResponse[any]{Data: resp})
 }
 
 // GetUser godoc
@@ -172,24 +142,21 @@ func (c *UserController) FindAll(ctx *gin.Context) {
 // @Failure 400 {object} dto.WebResponse
 // @Failure 404 {object} dto.WebResponse
 // @Router /api/v1/users/{id} [get]
-func (c *UserController) FindByID(ctx *gin.Context) {
+func (c *UserController) FindByID(ctx echo.Context) error {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid id"})
-		return
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid id"})
 	}
 
-	user, err := c.repo.FindByID(ctx, id)
+	user, err := c.repo.FindByID(ctx.Request().Context(), id)
 	if err != nil {
 		if err == repository.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, dto.WebResponse[any]{Message: "user not found"})
-			return
+			return ctx.JSON(http.StatusNotFound, dto.WebResponse[any]{Message: "user not found"})
 		}
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch user"})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch user"})
 	}
-	ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Data: dto.FromEntity(user)})
+	return ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Data: dto.FromEntity(user)})
 }
 
 // UpdateUser godoc
@@ -204,28 +171,24 @@ func (c *UserController) FindByID(ctx *gin.Context) {
 // @Failure 400 {object} dto.WebResponse
 // @Failure 404 {object} dto.WebResponse
 // @Router /api/v1/users/{id} [put]
-func (c *UserController) Update(ctx *gin.Context) {
+func (c *UserController) Update(ctx echo.Context) error {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid id"})
-		return
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid id"})
 	}
 
 	var req updateUserReq
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "updateUserReq")})
-		return
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "updateUserReq")})
 	}
 
-	user, err := c.repo.FindByID(ctx, id)
+	user, err := c.repo.FindByID(ctx.Request().Context(), id)
 	if err != nil {
 		if err == repository.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, dto.WebResponse[any]{Message: "user not found"})
-			return
+			return ctx.JSON(http.StatusNotFound, dto.WebResponse[any]{Message: "user not found"})
 		}
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch user"})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch user"})
 	}
 
 	if req.Email != nil {
@@ -247,17 +210,15 @@ func (c *UserController) Update(ctx *gin.Context) {
 		enc := encryptutils.NewBcryptEncryptor(10)
 		hashed, err := enc.Hash(*req.Password)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to hash password"})
-			return
+			return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to hash password"})
 		}
 		user.Password = hashed
 	}
 
-	if err := c.repo.Update(ctx, user); err != nil {
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to update user"})
-		return
+	if err := c.repo.Update(ctx.Request().Context(), user); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to update user"})
 	}
-	ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Message: "updated", Data: dto.FromEntity(user)})
+	return ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Message: "updated", Data: dto.FromEntity(user)})
 }
 
 // DeleteUser godoc
@@ -271,19 +232,17 @@ func (c *UserController) Update(ctx *gin.Context) {
 // @Failure 400 {object} dto.WebResponse
 // @Failure 404 {object} dto.WebResponse
 // @Router /api/v1/users/{id} [delete]
-func (c *UserController) Delete(ctx *gin.Context) {
+func (c *UserController) Delete(ctx echo.Context) error {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid id"})
-		return
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid id"})
 	}
 
-	if err := c.repo.Delete(ctx, id); err != nil {
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to delete user"})
-		return
+	if err := c.repo.Delete(ctx.Request().Context(), id); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to delete user"})
 	}
-	ctx.Status(http.StatusNoContent)
+	return ctx.NoContent(http.StatusNoContent)
 }
 
 // GetUserToken godoc
@@ -295,18 +254,27 @@ func (c *UserController) Delete(ctx *gin.Context) {
 // @Success 200 {object} dto.WebResponse
 // @Failure 401 {object} dto.WebResponse
 // @Router /api/v1/users/token [get]
-func (c *UserController) UserToken(ctx *gin.Context) {
-	userID, exists := ctx.Get("user_id")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, dto.WebResponse[any]{Message: "unauthorized"})
-		return
+func (c *UserController) UserToken(ctx echo.Context) error {
+	// read user id set by auth middleware using the package constant key
+	uid := ctx.Get("ctx-user-id")
+	if uid == nil {
+		return ctx.JSON(http.StatusUnauthorized, dto.WebResponse[any]{Message: "unauthorized"})
 	}
 
-	user, err := c.repo.FindByID(ctx, userID.(int64))
+	var userID int64
+	switch v := uid.(type) {
+	case int64:
+		userID = v
+	case int:
+		userID = int64(v)
+	default:
+		return ctx.JSON(http.StatusUnauthorized, dto.WebResponse[any]{Message: "unauthorized"})
+	}
+
+	user, err := c.repo.FindByID(ctx.Request().Context(), userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch user"})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to fetch user"})
 	}
 
-	ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Data: dto.FromEntity(user)})
+	return ctx.JSON(http.StatusOK, dto.WebResponse[dto.UserResponse]{Data: dto.FromEntity(user)})
 }

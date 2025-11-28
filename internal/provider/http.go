@@ -1,65 +1,72 @@
 package provider
 
 import (
-	"fmt"
+	"net/http"
 
-	"TWclone/internal/config"
-	"TWclone/internal/controller"
+	"TwClone/internal/config"
+	"TwClone/internal/controller"
+	"TwClone/internal/pkg/utils/jwtutils"
 
-	// register generated swagger docs
-	_ "TWclone/docs"
-
-	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
+	echo "github.com/labstack/echo/v4"
 )
 
-func BootstrapHttp(cfg *config.Config, router *gin.Engine) {
+func BootstrapHttp(cfg *config.Config, router *echo.Echo) {
+	// App-level routes
+	appController := controller.NewAppController()
+	appController.Route(router)
 
-	version := "1"
-	if cfg != nil && cfg.App != nil && cfg.App.Version != "" {
-		version = cfg.App.Version
-	}
-	basePath := fmt.Sprintf("/api/v%s", version)
+	// API v1 group for all controllers
+	api := router.Group("/api/v1")
 
-	base := router.Group(basePath)
+	// Register controllers (in-place constructors)
+	controller.NewAuthController(cfg).Route(api)
+	controller.NewUserController().Route(api)
+	controller.NewLikeController().Route(api)
+	controller.NewFollowController().Route(api)
+	controller.NewHashtagController().Route(api)
+	controller.NewMediaController().Route(api)
+	controller.NewMentionController().Route(api)
+	controller.NewNotificationController().Route(api)
+	controller.NewTweetHashtagController().Route(api)
 
-	appCtrl := controller.NewAppController()
-	appCtrl.Route(base)
+	// Ensure OPTIONS preflight requests are handled even if a specific route isn't matched.
+	// Echo's CORS middleware will attach the necessary CORS headers; this handler returns 200 for OPTIONS.
+	router.OPTIONS("/*", func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	})
 
-	userCtrl := controller.NewUserController()
-	userCtrl.Route(base)
+	// Temporary debug endpoint to parse JWT from Authorization header using server config.
+	// Helps debugging mismatches between token issuer/alg/secret.
+	router.GET("/internal/debug/jwt", func(c echo.Context) error {
+		if cfg == nil || cfg.Jwt == nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": "jwt config not available on server"})
+		}
 
-	authCtrl := controller.NewAuthController(cfg)
-	authCtrl.Route(base)
+		auth := c.Request().Header.Get("Authorization")
+		if auth == "" {
+			// try cookie fallback
+			if ck, err := c.Cookie("accessToken"); err == nil && ck != nil {
+				auth = "Bearer " + ck.Value
+			}
+		}
+		if auth == "" {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": "authorization header or accessToken cookie not provided"})
+		}
 
-	// Register all entity controllers
-	followCtrl := controller.NewFollowController()
-	followCtrl.Route(base)
+		// naive parse
+		var token string
+		if len(auth) > 7 && auth[:7] == "Bearer " {
+			token = auth[7:]
+		} else {
+			token = auth
+		}
 
-	likeCtrl := controller.NewLikeController()
-	likeCtrl.Route(base)
+		ju := jwtutils.NewJwtUtil(cfg.Jwt)
+		claims, err := ju.Parse(token)
+		if err != nil {
+			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "failed to parse token", "detail": err.Error()})
+		}
 
-	hashtagCtrl := controller.NewHashtagController()
-	hashtagCtrl.Route(base)
-
-	tweetHashtagCtrl := controller.NewTweetHashtagController()
-	tweetHashtagCtrl.Route(base)
-
-	mentionCtrl := controller.NewMentionController()
-	mentionCtrl.Route(base)
-
-	mediaCtrl := controller.NewMediaController()
-	mediaCtrl.Route(base)
-
-	notifCtrl := controller.NewNotificationController()
-	notifCtrl.Route(base)
-
-	router.NoRoute(appCtrl.RouteNotFound)
-	router.NoMethod(appCtrl.MethodNotAllowed)
-
-	// Swagger UI (if docs are generated with swag). Run `swag init` in repo root
-	// to generate the docs under ./docs. The swagger UI will be available at
-	// /swagger/index.html
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		return c.JSON(http.StatusOK, echo.Map{"claims": claims})
+	})
 }

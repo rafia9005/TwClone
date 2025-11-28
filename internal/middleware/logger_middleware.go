@@ -4,51 +4,53 @@ import (
 	"net/http"
 	"time"
 
-	"TWclone/internal/pkg/httperror"
-	"TWclone/internal/pkg/logger"
-
-	"github.com/gin-gonic/gin"
+	"TwClone/internal/pkg/httperror"
+	"TwClone/internal/pkg/logger"
 	"github.com/go-playground/validator/v10"
+	echo "github.com/labstack/echo/v4"
 )
 
-func Logger() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		start := time.Now()
-		path := ctx.Request.URL.Path
-		ctx.Next()
+func Logger() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			start := time.Now()
+			path := ctx.Request().URL.Path
 
-		params := map[string]any{
-			"status_code": ctx.Writer.Status(),
-			"client_ip":   ctx.ClientIP(),
-			"method":      ctx.Request.Method,
-			"latency":     time.Since(start).String(),
-			"path":        path,
-		}
+			err := next(ctx)
 
-		if len(ctx.Errors) == 0 {
-			logger.Log.WithFields(params).Info("incoming request")
-			return
+			params := map[string]any{
+				"status_code": ctx.Response().Status,
+				"client_ip":   ctx.RealIP(),
+				"method":      ctx.Request().Method,
+				"latency":     time.Since(start).String(),
+				"path":        path,
+			}
+
+			if err == nil {
+				logger.Log.WithFields(params).Info("incoming request")
+				return nil
+			}
+
+			logErrors(ctx, params, err)
+			return err
 		}
-		logErrors(ctx, params)
 	}
 }
 
-func logErrors(ctx *gin.Context, params map[string]any) {
-	errors := []error{}
-	for _, err := range ctx.Errors {
-		switch e := err.Err.(type) {
-		case validator.ValidationErrors:
-			params["status_code"] = http.StatusBadRequest
-			errors = append(errors, err)
-		case *httperror.ResponseError:
-			params["status_code"] = e.GetCode()
-			errors = append(errors, e.OriginalError())
-		default:
-			params["status_code"] = http.StatusInternalServerError
-			errors = append(errors, err)
-		}
+func logErrors(ctx echo.Context, params map[string]any, err error) {
+	errorsList := []error{}
+	switch e := err.(type) {
+	case validator.ValidationErrors:
+		params["status_code"] = http.StatusBadRequest
+		errorsList = append(errorsList, err)
+	case *httperror.ResponseError:
+		params["status_code"] = e.GetCode()
+		errorsList = append(errorsList, e.OriginalError())
+	default:
+		params["status_code"] = http.StatusInternalServerError
+		errorsList = append(errorsList, err)
 	}
 
-	params["errors"] = errors
+	params["errors"] = errorsList
 	logger.Log.WithFields(params).Error("got error")
 }

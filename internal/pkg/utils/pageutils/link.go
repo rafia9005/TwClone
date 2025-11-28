@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"TWclone/internal/dto"
+	"TwClone/internal/dto"
 )
 
 const (

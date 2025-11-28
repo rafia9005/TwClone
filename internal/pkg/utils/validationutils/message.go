@@ -3,8 +3,7 @@ package validationutils
 import (
 	"fmt"
 
-	"TWclone/internal/constant"
-
+	"TwClone/internal/constant"
 	"github.com/go-playground/validator/v10"
 )
 

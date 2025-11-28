@@ -7,8 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"TWclone/internal/config"
-
+	"TwClone/internal/config"
 	"github.com/rs/zerolog"
 )
 

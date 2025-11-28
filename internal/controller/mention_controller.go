@@ -1,14 +1,14 @@
 package controller
 
 import (
-	"TWclone/internal/dto"
-	"TWclone/internal/entity"
-	"TWclone/internal/repository"
+	"TwClone/internal/dto"
+	"TwClone/internal/entity"
+	"TwClone/internal/repository"
 	"context"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type MentionController struct {
@@ -19,24 +19,22 @@ func NewMentionController() *MentionController {
 	return &MentionController{repo: repository.MentionRepositoryImpl{}}
 }
 
-func (c *MentionController) Route(r gin.IRouter) {
-	g := r.Group("/mentions")
-	g.POST("", c.Create)
-	g.GET("/tweet/:tweet_id", c.ByTweet)
-	g.GET("/user/:user_id", c.ByUser)
+func (c *MentionController) Route(g *echo.Group) {
+	mg := g.Group("/mentions")
+	mg.POST("", c.Create)
+	mg.GET("/tweet/:tweet_id", c.ByTweet)
+	mg.GET("/user/:user_id", c.ByUser)
 }
 
-func (c *MentionController) Create(ctx *gin.Context) {
+func (c *MentionController) Create(ctx echo.Context) error {
 	var mention entity.Mention
-	if err := ctx.ShouldBindJSON(&mention); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Mention")})
-		return
+	if err := ctx.Bind(&mention); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Mention")})
 	}
 	if err := c.repo.Create(context.Background(), &mention); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusCreated, mention)
+	return ctx.JSON(http.StatusCreated, mention)
 }
 
 // CreateMention godoc
@@ -70,22 +68,20 @@ func (c *MentionController) Create(ctx *gin.Context) {
 // @Success 200 {array} entity.Mention
 // @Router /api/v1/mentions/user/{user_id} [get]
 
-func (c *MentionController) ByTweet(ctx *gin.Context) {
+func (c *MentionController) ByTweet(ctx echo.Context) error {
 	tweetID, _ := strconv.ParseInt(ctx.Param("tweet_id"), 10, 64)
 	mentions, err := c.repo.FindByTweetID(context.Background(), tweetID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, mentions)
+	return ctx.JSON(http.StatusOK, mentions)
 }
 
-func (c *MentionController) ByUser(ctx *gin.Context) {
+func (c *MentionController) ByUser(ctx echo.Context) error {
 	userID, _ := strconv.ParseInt(ctx.Param("user_id"), 10, 64)
 	mentions, err := c.repo.FindByUserID(context.Background(), userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, mentions)
+	return ctx.JSON(http.StatusOK, mentions)
 }

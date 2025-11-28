@@ -7,10 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"TWclone/internal/config"
-	"TWclone/internal/pkg/logger"
-	"TWclone/internal/provider"
-
+	"TwClone/internal/config"
+	"TwClone/internal/pkg/logger"
+	"TwClone/internal/provider"
 	"github.com/spf13/cobra"
 )
 

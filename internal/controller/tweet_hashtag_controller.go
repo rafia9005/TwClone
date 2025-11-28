@@ -1,14 +1,14 @@
 package controller
 
 import (
-	"TWclone/internal/dto"
-	"TWclone/internal/entity"
-	"TWclone/internal/repository"
+	"TwClone/internal/dto"
+	"TwClone/internal/entity"
+	"TwClone/internal/repository"
 	"context"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type TweetHashtagController struct {
@@ -19,24 +19,22 @@ func NewTweetHashtagController() *TweetHashtagController {
 	return &TweetHashtagController{repo: repository.TweetHashtagRepositoryImpl{}}
 }
 
-func (c *TweetHashtagController) Route(r gin.IRouter) {
-	g := r.Group("/tweet-hashtags")
-	g.POST("", c.Create)
-	g.GET("/tweet/:tweet_id", c.ByTweet)
-	g.GET("/hashtag/:hashtag_id", c.ByHashtag)
+func (c *TweetHashtagController) Route(g *echo.Group) {
+	thg := g.Group("/tweet-hashtags")
+	thg.POST("", c.Create)
+	thg.GET("/tweet/:tweet_id", c.ByTweet)
+	thg.GET("/hashtag/:hashtag_id", c.ByHashtag)
 }
 
-func (c *TweetHashtagController) Create(ctx *gin.Context) {
+func (c *TweetHashtagController) Create(ctx echo.Context) error {
 	var th entity.TweetHashtag
-	if err := ctx.ShouldBindJSON(&th); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "TweetHashtag")})
-		return
+	if err := ctx.Bind(&th); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "TweetHashtag")})
 	}
 	if err := c.repo.Create(context.Background(), &th); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusCreated, th)
+	return ctx.JSON(http.StatusCreated, th)
 }
 
 // CreateTweetHashtag godoc
@@ -70,22 +68,20 @@ func (c *TweetHashtagController) Create(ctx *gin.Context) {
 // @Success 200 {array} entity.TweetHashtag
 // @Router /api/v1/tweet-hashtags/hashtag/{hashtag_id} [get]
 
-func (c *TweetHashtagController) ByTweet(ctx *gin.Context) {
+func (c *TweetHashtagController) ByTweet(ctx echo.Context) error {
 	tweetID, _ := strconv.ParseInt(ctx.Param("tweet_id"), 10, 64)
 	ths, err := c.repo.FindByTweetID(context.Background(), tweetID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, ths)
+	return ctx.JSON(http.StatusOK, ths)
 }
 
-func (c *TweetHashtagController) ByHashtag(ctx *gin.Context) {
+func (c *TweetHashtagController) ByHashtag(ctx echo.Context) error {
 	hashtagID, _ := strconv.ParseInt(ctx.Param("hashtag_id"), 10, 64)
 	ths, err := c.repo.FindByHashtagID(context.Background(), hashtagID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, ths)
+	return ctx.JSON(http.StatusOK, ths)
 }

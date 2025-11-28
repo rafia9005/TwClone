@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"TWclone/internal/database"
-	"TWclone/internal/entity"
+	"TwClone/internal/database"
+	"TwClone/internal/entity"
 	"context"
 )
 

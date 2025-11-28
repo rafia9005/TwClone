@@ -23,7 +23,7 @@ A robust and scalable starter template for building backend applications using G
 Clone the repository using the command below:
 
 ```bash
-git clone https://TWclone
+git clone https://TwClone
 ```
 
 Or you can also use this repository as template

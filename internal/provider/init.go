@@ -1,9 +1,8 @@
 package provider
 
 import (
-	"TWclone/internal/config"
-	"TWclone/internal/database"
-
+	"TwClone/internal/config"
+	"TwClone/internal/database"
 	"gorm.io/gorm"
 )
 

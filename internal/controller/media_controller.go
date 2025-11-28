@@ -1,14 +1,14 @@
 package controller
 
 import (
-	"TWclone/internal/dto"
-	"TWclone/internal/entity"
-	"TWclone/internal/repository"
+	"TwClone/internal/dto"
+	"TwClone/internal/entity"
+	"TwClone/internal/repository"
 	"context"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type MediaController struct {
@@ -19,24 +19,22 @@ func NewMediaController() *MediaController {
 	return &MediaController{repo: repository.MediaRepositoryImpl{}}
 }
 
-func (c *MediaController) Route(r gin.IRouter) {
-	g := r.Group("/media")
-	g.POST("", c.Create)
-	g.GET("/tweet/:tweet_id", c.ByTweet)
-	g.GET("/:id", c.ByID)
+func (c *MediaController) Route(g *echo.Group) {
+	mg := g.Group("/media")
+	mg.POST("", c.Create)
+	mg.GET("/tweet/:tweet_id", c.ByTweet)
+	mg.GET("/:id", c.ByID)
 }
 
-func (c *MediaController) Create(ctx *gin.Context) {
+func (c *MediaController) Create(ctx echo.Context) error {
 	var media entity.Media
-	if err := ctx.ShouldBindJSON(&media); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Media")})
-		return
+	if err := ctx.Bind(&media); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Media")})
 	}
 	if err := c.repo.Create(context.Background(), &media); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusCreated, media)
+	return ctx.JSON(http.StatusCreated, media)
 }
 
 // CreateMedia godoc
@@ -70,22 +68,20 @@ func (c *MediaController) Create(ctx *gin.Context) {
 // @Success 200 {object} entity.Media
 // @Router /api/v1/media/{id} [get]
 
-func (c *MediaController) ByTweet(ctx *gin.Context) {
+func (c *MediaController) ByTweet(ctx echo.Context) error {
 	tweetID, _ := strconv.ParseInt(ctx.Param("tweet_id"), 10, 64)
 	media, err := c.repo.FindByTweetID(context.Background(), tweetID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, media)
+	return ctx.JSON(http.StatusOK, media)
 }
 
-func (c *MediaController) ByID(ctx *gin.Context) {
+func (c *MediaController) ByID(ctx echo.Context) error {
 	id, _ := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	media, err := c.repo.FindByID(context.Background(), id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-		return
+		return ctx.JSON(http.StatusNotFound, dto.WebResponse[any]{Message: "not found"})
 	}
-	ctx.JSON(http.StatusOK, media)
+	return ctx.JSON(http.StatusOK, media)
 }

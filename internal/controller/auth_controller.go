@@ -3,14 +3,14 @@ package controller
 import (
 	"net/http"
 
-	"TWclone/internal/config"
-	"TWclone/internal/dto"
-	"TWclone/internal/entity"
-	"TWclone/internal/pkg/utils/encryptutils"
-	"TWclone/internal/pkg/utils/jwtutils"
-	"TWclone/internal/repository"
+	"TwClone/internal/config"
+	"TwClone/internal/dto"
+	"TwClone/internal/entity"
+	"TwClone/internal/pkg/utils/encryptutils"
+	"TwClone/internal/pkg/utils/jwtutils"
+	"TwClone/internal/repository"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type AuthController struct {
@@ -39,26 +39,26 @@ func NewAuthController(cfg *config.Config) *AuthController {
 	}
 }
 
-func (c *AuthController) Route(r gin.IRouter) {
-	g := r.Group("/auth")
-	g.POST("/login", c.Login)
-	g.POST("/register", c.Register)
+func (c *AuthController) Route(g *echo.Group) {
+	ag := g.Group("/auth")
+	ag.POST("/login", c.Login)
+	ag.POST("/register", c.Register)
 }
 
 type loginRequest struct {
-	Email    string `json:"email" binding:"omitempty,email"`
-	Username string `json:"username" binding:"omitempty"`
-	Password string `json:"password" binding:"required"`
+	Email    string `json:"email" validate:"omitempty,email"`
+	Username string `json:"username" validate:"omitempty"`
+	Password string `json:"password" validate:"required"`
 }
 
 type registerRequest struct {
-	Email    string `json:"email" binding:"required,email"`
+	Email    string `json:"email" validate:"required,email"`
 	Name     string `json:"name"`
-	Username string `json:"username" binding:"required"`
+	Username string `json:"username" validate:"required"`
 	Avatar   string `json:"avatar"`
 	Banner   string `json:"banner"`
 	Bio      string `json:"bio"`
-	Password string `json:"password" binding:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 // Login godoc
@@ -72,51 +72,46 @@ type registerRequest struct {
 // @Failure 400 {object} dto.WebResponse
 // @Failure 401 {object} dto.WebResponse
 // @Router /api/v1/auth/login [post]
-func (c *AuthController) Login(ctx *gin.Context) {
+func (c *AuthController) Login(ctx echo.Context) error {
 	var req loginRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "loginRequest")})
-		return
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "loginRequest")})
 	}
 
 	var user *entity.User
 	var err error
 	if req.Email != "" {
-		user, err = c.userRepo.FindByEmail(ctx, req.Email)
+		user, err = c.userRepo.FindByEmail(ctx.Request().Context(), req.Email)
 	} else if req.Username != "" {
-		user, err = c.userRepo.FindByUsername(ctx, req.Username)
+		user, err = c.userRepo.FindByUsername(ctx.Request().Context(), req.Username)
 	} else {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "email or username required"})
-		return
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "email or username required"})
 	}
 
 	if err != nil {
 		if err == repository.ErrRecordNotFound {
-			ctx.JSON(http.StatusUnauthorized, dto.WebResponse[any]{Message: "invalid credentials"})
-			return
+			return ctx.JSON(http.StatusUnauthorized, dto.WebResponse[any]{Message: "invalid credentials"})
 		}
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to lookup user"})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to lookup user"})
 	}
 
 	if !c.encryptor.Check(req.Password, user.Password) {
-		ctx.JSON(http.StatusUnauthorized, dto.WebResponse[any]{Message: "invalid credentials"})
-		return
+		return ctx.JSON(http.StatusUnauthorized, dto.WebResponse[any]{Message: "invalid credentials"})
 	}
 
 	var token string
 	if c.jwt != nil {
 		t, err := c.jwt.Sign(user.ID)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to generate token"})
-			return
+			return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to generate token"})
 		}
 		token = t
+
 	}
 
 	userDTO := dto.FromEntity(user)
 
-	ctx.JSON(http.StatusOK, dto.WebResponse[any]{Data: gin.H{"token": token, "user": userDTO}})
+	return ctx.JSON(http.StatusOK, dto.WebResponse[any]{Data: echo.Map{"token": token, "user": userDTO}})
 }
 
 // Register godoc
@@ -130,18 +125,16 @@ func (c *AuthController) Login(ctx *gin.Context) {
 // @Failure 400 {object} dto.WebResponse
 // @Failure 409 {object} dto.WebResponse
 // @Router /api/v1/auth/register [post]
-func (c *AuthController) Register(ctx *gin.Context) {
+func (c *AuthController) Register(ctx echo.Context) error {
 	var req registerRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "registerRequest")})
-		return
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "registerRequest")})
 	}
 
 	// hash password before storing
 	hashed, err := c.encryptor.Hash(req.Password)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to hash password"})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed to hash password"})
 	}
 
 	user := &entity.User{
@@ -154,31 +147,27 @@ func (c *AuthController) Register(ctx *gin.Context) {
 		Password: hashed,
 	}
 
-	if err := c.userRepo.Create(ctx, user); err != nil {
+	if err := c.userRepo.Create(ctx.Request().Context(), user); err != nil {
 		if err.Error() == "duplicate_email" {
-			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
+			return ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
 				Message: "validation error",
 				Errors:  []dto.FieldError{{Field: "email", Message: "email already exists"}},
 			})
-			return
 		}
 		if err.Error() == "duplicate_username" {
-			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
+			return ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
 				Message: "validation error",
 				Errors:  []dto.FieldError{{Field: "username", Message: "username already exists"}},
 			})
-			return
 		}
 		if err == repository.ErrDuplicate {
-			ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
+			return ctx.JSON(http.StatusConflict, dto.WebResponse[any]{
 				Message: "validation error",
 				Errors:  []dto.FieldError{{Field: "unknown", Message: "email or username already exists"}},
 			})
-			return
 		}
-		ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed create user"})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: "failed create user"})
 	}
 
-	ctx.JSON(http.StatusCreated, dto.WebResponse[dto.UserResponse]{Message: "created", Data: dto.FromEntity(user)})
+	return ctx.JSON(http.StatusCreated, dto.WebResponse[dto.UserResponse]{Message: "created", Data: dto.FromEntity(user)})
 }

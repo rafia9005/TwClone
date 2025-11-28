@@ -3,81 +3,86 @@ package middleware
 import (
 	"strings"
 
-	"TWclone/internal/constant"
-	"TWclone/internal/pkg/httperror"
-	"TWclone/internal/pkg/logger"
-	"TWclone/internal/pkg/utils/jwtutils"
+	"TwClone/internal/constant"
+	"TwClone/internal/pkg/httperror"
+	"TwClone/internal/pkg/logger"
+	"TwClone/internal/pkg/utils/jwtutils"
 
-	"github.com/gin-gonic/gin"
+	echo "github.com/labstack/echo/v4"
 )
 
-type AuthMiddleware struct {
+type AuthMiddlewareImpl struct {
 	jwtUtil jwtutils.JwtUtil
 }
 
-func NewAuthMiddleware(jwtUtil jwtutils.JwtUtil) *AuthMiddleware {
-	return &AuthMiddleware{
+func NewAuthMiddleware(jwtUtil jwtutils.JwtUtil) *AuthMiddlewareImpl {
+	return &AuthMiddlewareImpl{
 		jwtUtil: jwtUtil,
 	}
 }
 
-func (m *AuthMiddleware) Authorization() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		accessToken, err := m.parseAccessToken(ctx)
-		if err != nil {
-			// attach a helpful error to the context for logging/response
-			// parseAccessToken will return an UnauthorizedError when token not found
-			// but we also log diagnostic flags inside parseAccessToken
-			ctx.Error(err)
-			ctx.Abort()
-			return
-		}
+// package-level default jwt util used by the convenience AuthMiddleware() function.
+var defaultJwt jwtutils.JwtUtil
 
-		claims, err := m.jwtUtil.Parse(accessToken)
-		if err != nil {
-			// Log parse error (do NOT include token value). This helps understand
-			// if the token is malformed, expired, or signed with a different secret.
-			logger.Log.WithField("source", "auth_middleware").Errorf("jwt parse error: %v", err)
-			ctx.Error(httperror.NewUnauthorizedError())
-			ctx.Abort()
-			return
-		}
+// SetDefaultJwtUtil sets the default JwtUtil used by AuthMiddleware().
+func SetDefaultJwtUtil(j jwtutils.JwtUtil) {
+	defaultJwt = j
+}
 
-		ctx.Set(constant.CTX_USER_ID, claims.UserID)
-		ctx.Next()
+// AuthMiddleware is a convenience function returning an echo middleware using the
+// package-level default JwtUtil. Call SetDefaultJwtUtil(...) during application
+// initialization (for example in server.RegisterMiddleware) to provide a JwtUtil.
+func AuthMiddleware() echo.MiddlewareFunc {
+	if defaultJwt == nil {
+		// If not initialized, return a middleware that rejects requests.
+		return func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(ctx echo.Context) error {
+				return httperror.NewUnauthorizedError()
+			}
+		}
+	}
+	return NewAuthMiddleware(defaultJwt).Authorization()
+}
+
+func (m *AuthMiddlewareImpl) Authorization() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			accessToken, err := m.parseAccessToken(ctx)
+			if err != nil {
+				logger.Log.Debugf("auth: parseAccessToken error: %v", err)
+				return err
+			}
+
+			claims, err := m.jwtUtil.Parse(accessToken)
+			if err != nil {
+				// log parse error for debugging without exposing full token
+				tokenPreview := accessToken
+				if len(tokenPreview) > 8 {
+					tokenPreview = tokenPreview[:8]
+				}
+				logger.Log.Debugf("auth: jwt parse failed (token preview=%s): %v", tokenPreview, err)
+				return httperror.NewUnauthorizedError()
+			}
+
+			ctx.Set(constant.CTX_USER_ID, claims.UserID)
+			return next(ctx)
+		}
 	}
 }
 
-func (m *AuthMiddleware) parseAccessToken(ctx *gin.Context) (string, error) {
-	// Try Authorization header first
-	accessToken := ctx.GetHeader("Authorization")
-	headerPresent := false
-	if accessToken != "" {
-		headerPresent = true
-		// header present
-		splitToken := strings.Split(accessToken, " ")
-		if len(splitToken) == 2 && splitToken[0] == "Bearer" {
-			// do NOT log token value
-			logger.Log.Info("auth: Authorization header present (Bearer token)")
-			return splitToken[1], nil
+func (m *AuthMiddlewareImpl) parseAccessToken(ctx echo.Context) (string, error) {
+	accessToken := ctx.Request().Header.Get("Authorization")
+	if accessToken == "" || len(accessToken) == 0 {
+		// Fallback: try cookie named "accessToken" (frontend may send token in cookie)
+		if ck, err := ctx.Cookie("accessToken"); err == nil && ck != nil && ck.Value != "" {
+			return ck.Value, nil
 		}
-		// bad header format
-		logger.Log.Info("auth: Authorization header malformed")
 		return "", httperror.NewUnauthorizedError()
 	}
 
-	// Fallback: try cookie named accessToken
-	cookiePresent := false
-	if cookie, err := ctx.Cookie("accessToken"); err == nil && cookie != "" {
-		cookiePresent = true
-		// cookie present (do not log cookie value)
-		logger.Log.Infof("auth: cookie present=%v headerPresent=%v", cookiePresent, headerPresent)
-		return cookie, nil
+	splitToken := strings.Split(accessToken, " ")
+	if len(splitToken) != 2 || splitToken[0] != "Bearer" {
+		return "", httperror.NewUnauthorizedError()
 	}
-
-	// If neither header nor cookie present, log flags for diagnostics
-	logger.Log.Infof("auth: token not found - headerPresent=%v cookiePresent=%v", headerPresent, cookiePresent)
-
-	// No token found
-	return "", httperror.NewUnauthorizedError()
+	return splitToken[1], nil
 }

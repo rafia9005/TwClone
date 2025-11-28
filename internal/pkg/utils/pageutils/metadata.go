@@ -3,7 +3,7 @@ package pageutils
 import (
 	"math"
 
-	"TWclone/internal/dto"
+	"TwClone/internal/dto"
 )
 
 func CreateMetaData[T any](items []T, page, limit int64) ([]T, *dto.PageMetaData) {

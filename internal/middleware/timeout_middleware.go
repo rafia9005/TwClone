@@ -4,42 +4,47 @@ import (
 	"context"
 	"time"
 
-	"TWclone/internal/config"
-	"TWclone/internal/pkg/httperror"
-
-	"github.com/gin-gonic/gin"
+	"TwClone/internal/config"
+	"TwClone/internal/pkg/httperror"
+	echo "github.com/labstack/echo/v4"
 )
 
-func RequestTimeout(cfg *config.Config) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		timeoutCtx, cancel := context.WithTimeout(
-			ctx.Request.Context(),
-			time.Duration(cfg.HttpServer.RequestTimeoutPeriod)*time.Second,
-		)
-		defer cancel()
+func RequestTimeout(cfg *config.Config) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			timeoutCtx, cancel := context.WithTimeout(
+				ctx.Request().Context(),
+				time.Duration(cfg.HttpServer.RequestTimeoutPeriod)*time.Second,
+			)
+			defer cancel()
 
-		done := make(chan struct{})
-		ctx.Request = ctx.Request.WithContext(timeoutCtx)
+			// attach new request context
+			req := ctx.Request()
+			req = req.WithContext(timeoutCtx)
+			ctx.SetRequest(req)
 
-		go next(ctx, done)
+			done := make(chan error, 1)
 
-		select {
-		case <-timeoutCtx.Done():
-			ctx.Error(httperror.NewTimeoutError())
-			ctx.Abort()
-		case <-done:
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						if err, ok := r.(error); ok {
+							done <- err
+							return
+						}
+						done <- nil
+						return
+					}
+				}()
+				done <- next(ctx)
+			}()
+
+			select {
+			case <-timeoutCtx.Done():
+				return httperror.NewTimeoutError()
+			case err := <-done:
+				return err
+			}
 		}
 	}
-}
-
-func next(ctx *gin.Context, done chan struct{}) {
-	defer func() {
-		close(done)
-		if err, ok := recover().(error); ok && err != nil {
-			ctx.Error(err)
-			ctx.Abort()
-		}
-	}()
-
-	ctx.Next()
 }

@@ -1,14 +1,16 @@
 package controller
 
 import (
-	"TWclone/internal/dto"
-	"TWclone/internal/entity"
-	"TWclone/internal/repository"
 	"context"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
+	"TwClone/internal/dto"
+	"TwClone/internal/entity"
+	"TwClone/internal/middleware"
+	"TwClone/internal/repository"
+
+	"github.com/labstack/echo/v4"
 )
 
 type FollowController struct {
@@ -19,25 +21,23 @@ func NewFollowController() *FollowController {
 	return &FollowController{repo: repository.FollowRepositoryImpl{}}
 }
 
-func (c *FollowController) Route(r gin.IRouter) {
-	g := r.Group("/follows")
-	g.POST("", c.Create)
-	g.DELETE("", c.Delete)
-	g.GET("/followers/:id", c.Followers)
-	g.GET("/following/:id", c.Following)
+func (c *FollowController) Route(g *echo.Group) {
+	fg := g.Group("/follows", middleware.AuthMiddleware())
+	fg.POST("", c.Create)
+	fg.DELETE("", c.Delete)
+	fg.GET("/followers/:id", c.Followers)
+	fg.GET("/following/:id", c.Following)
 }
 
-func (c *FollowController) Create(ctx *gin.Context) {
+func (c *FollowController) Create(ctx echo.Context) error {
 	var follow entity.Follow
-	if err := ctx.ShouldBindJSON(&follow); err != nil {
-		ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Follow")})
-		return
+	if err := ctx.Bind(&follow); err != nil {
+		return ctx.JSON(http.StatusBadRequest, dto.WebResponse[any]{Message: "invalid request", Errors: extractFieldErrors(err, "Follow")})
 	}
 	if err := c.repo.Create(context.Background(), &follow); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusCreated, follow)
+	return ctx.JSON(http.StatusCreated, follow)
 }
 
 // CreateFollow godoc
@@ -83,32 +83,29 @@ func (c *FollowController) Create(ctx *gin.Context) {
 // @Success 200 {array} entity.Follow
 // @Router /api/v1/follows/following/{id} [get]
 
-func (c *FollowController) Delete(ctx *gin.Context) {
-	followerID, _ := strconv.ParseInt(ctx.Query("follower_id"), 10, 64)
-	followingID, _ := strconv.ParseInt(ctx.Query("following_id"), 10, 64)
+func (c *FollowController) Delete(ctx echo.Context) error {
+	followerID, _ := strconv.ParseInt(ctx.QueryParam("follower_id"), 10, 64)
+	followingID, _ := strconv.ParseInt(ctx.QueryParam("following_id"), 10, 64)
 	if err := c.repo.Delete(context.Background(), followerID, followingID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "unfollowed"})
+	return ctx.JSON(http.StatusOK, echo.Map{"message": "unfollowed"})
 }
 
-func (c *FollowController) Followers(ctx *gin.Context) {
+func (c *FollowController) Followers(ctx echo.Context) error {
 	userID, _ := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	follows, err := c.repo.FindFollowers(context.Background(), userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, follows)
+	return ctx.JSON(http.StatusOK, follows)
 }
 
-func (c *FollowController) Following(ctx *gin.Context) {
+func (c *FollowController) Following(ctx echo.Context) error {
 	userID, _ := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	follows, err := c.repo.FindFollowing(context.Background(), userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.JSON(http.StatusInternalServerError, dto.WebResponse[any]{Message: err.Error()})
 	}
-	ctx.JSON(http.StatusOK, follows)
+	return ctx.JSON(http.StatusOK, follows)
 }

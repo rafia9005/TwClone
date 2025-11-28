@@ -7,17 +7,16 @@ import (
 	"net/http"
 	"time"
 
-	"TWclone/internal/config"
-	"TWclone/internal/middleware"
-	"TWclone/internal/pkg/logger"
-	"TWclone/internal/pkg/utils/validationutils"
-	"TWclone/internal/provider"
+	"TwClone/internal/config"
+	imw "TwClone/internal/middleware"
+	"TwClone/internal/pkg/logger"
+	"TwClone/internal/pkg/utils/jwtutils"
+	"TwClone/internal/pkg/utils/validationutils"
+	"TwClone/internal/provider"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/gzip"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	echo "github.com/labstack/echo/v4"
+	emw "github.com/labstack/echo/v4/middleware"
 )
 
 type HttpServer struct {
@@ -25,14 +24,23 @@ type HttpServer struct {
 	server *http.Server
 }
 
+type EchoValidator struct {
+	validator *validator.Validate
+}
+
+func (e *EchoValidator) Validate(i interface{}) error {
+	return e.validator.Struct(i)
+}
+
 func NewHttpServer(cfg *config.Config) *HttpServer {
-	gin.SetMode(cfg.App.Environment)
+	router := echo.New()
 
-	router := gin.New()
-	router.ContextWithFallback = true
-	router.HandleMethodNotAllowed = true
+	// register validator
+	v := validator.New()
+	v.RegisterTagNameFunc(validationutils.TagNameFormatter)
+	v.RegisterCustomTypeFunc(validationutils.DecimalType)
+	router.Validator = &EchoValidator{validator: v}
 
-	RegisterValidators()
 	RegisterMiddleware(router, cfg)
 
 	provider.BootstrapHttp(cfg, router)
@@ -65,35 +73,34 @@ func (s *HttpServer) Shutdown() {
 	logger.Log.Info("HTTP server shut down gracefully")
 }
 
-func RegisterValidators() {
-	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterTagNameFunc(validationutils.TagNameFormatter)
-		v.RegisterCustomTypeFunc(validationutils.DecimalType)
-	}
-}
-
-func RegisterMiddleware(router *gin.Engine, cfg *config.Config) {
-	middlewares := []gin.HandlerFunc{
-		gzip.Gzip(gzip.BestSpeed),
-		middleware.Logger(),
-		middleware.ErrorHandler(),
-		middleware.RequestTimeout(cfg),
-		cors.New(cors.Config{
-			// When AllowCredentials is true the Access-Control-Allow-Origin header
-			// must not be "*". Use AllowOriginFunc to echo and allow the request
-			// origin. This is safe for development; in production you should
-			// validate origins explicitly.
-			AllowOriginFunc: func(origin string) bool {
-				return true
+func RegisterMiddleware(router *echo.Echo, cfg *config.Config) {
+	// use echo middleware plus internal middleware adapted to echo
+	router.Use(
+		emw.Gzip(),
+		emw.CORSWithConfig(emw.CORSConfig{
+			AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+			AllowHeaders: []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+			// When AllowCredentials is true, Access-Control-Allow-Origin must be a specific origin
+			// (not '*'). Use AllowOriginFunc to permit localhost origins (any port) during dev.
+			// Allow all origins (useful in development). When AllowCredentials is true,
+			// Echo will echo the request Origin back in Access-Control-Allow-Origin when
+			// this function returns true.
+			AllowOriginFunc: func(origin string) (bool, error) {
+				return true, nil
 			},
-			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"},
-			AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
-			ExposeHeaders:    []string{"Content-Length"},
 			AllowCredentials: true,
-			MaxAge:           12 * time.Hour,
 		}),
-		gin.Recovery(),
-	}
+		emw.Recover(),
+	)
 
-	router.Use(middlewares...)
+	// internal middleware functions should return echo.MiddlewareFunc
+	// initialize default jwt util for middleware that needs it
+	if cfg != nil && cfg.Jwt != nil {
+		// Log non-sensitive JWT config to help debugging token issues (issuer and allowed algs)
+		logger.Log.Infof("jwt config loaded: issuer=%s, allowed_algs=%v", cfg.Jwt.Issuer, cfg.Jwt.AllowedAlgs)
+		imw.SetDefaultJwtUtil(jwtutils.NewJwtUtil(cfg.Jwt))
+	}
+	router.Use(imw.Logger())
+	router.Use(imw.ErrorHandler())
+	router.Use(imw.RequestTimeout(cfg))
 }

@@ -7,8 +7,8 @@ import (
 	"errors"
 	"strings"
 
-	"TWclone/internal/database"
-	"TWclone/internal/entity"
+	"TwClone/internal/database"
+	"TwClone/internal/entity"
 
 	"gorm.io/gorm"
 )

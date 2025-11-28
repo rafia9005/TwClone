@@ -1,6 +1,6 @@
 package dto
 
-import "TWclone/internal/entity"
+import "TwClone/internal/entity"
 
 // UserResponse is the API representation of a user (no password included).
 type UserResponse struct {

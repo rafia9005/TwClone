@@ -9,7 +9,6 @@ import (
 type AppConfig struct {
 	Environment string `mapstructure:"APP_ENVIRONMENT"`
 	BCryptCost  int    `mapstructure:"APP_BCRYPT_COST"`
-	Version     string `mapstructure:"APP_VERSION"`
 }
 
 func initAppConfig() *AppConfig {

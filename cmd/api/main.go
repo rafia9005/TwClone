@@ -1,6 +1,6 @@
 package main
 
-import "TWclone/cmd/workers"
+import "TwClone/cmd/workers"
 
 func main() {
 	workers.Start()

@@ -3,8 +3,8 @@ package workers
 import (
 	"context"
 
-	"TWclone/internal/config"
-	"TWclone/internal/server"
+	"TwClone/internal/config"
+	"TwClone/internal/server"
 )
 
 func runHttpWorker(cfg *config.Config, ctx context.Context) {

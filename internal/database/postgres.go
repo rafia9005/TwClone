@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"TWclone/internal/config"
-	"TWclone/internal/entity"
-	"TWclone/internal/pkg/logger"
+	"TwClone/internal/config"
+	"TwClone/internal/entity"
+	"TwClone/internal/pkg/logger"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
