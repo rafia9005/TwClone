@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -6,12 +5,11 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-
-import Fetch from "@/lib/fetch"
 import { useState } from "react"
 import { metaData } from "@/content"
 import Cookies from "js-cookie"
-
+import { authAPI } from "@/lib/api"
+import { Feather } from "lucide-react"
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email or username is required"),
@@ -21,7 +19,6 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>
 
 export default function Login() {
-
   const [apiError, setApiError] = useState<string | null>(null)
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -32,16 +29,15 @@ export default function Login() {
   async function onSubmit(values: LoginValues) {
     setApiError(null)
     try {
-      const payload: any = { password: values.password }
-      if (values.identifier.includes("@")) {
-        payload.email = values.identifier
-      } else {
-        payload.username = values.identifier
-      }
-      const res = await Fetch.post("/auth/login", payload)
-      // Simpan token jika ada
-      if (res.data?.data?.token) {
-        Cookies.set("accessToken", res.data.data.token, { path: "/" })
+      const loginData = values.identifier.includes("@")
+        ? { email: values.identifier, password: values.password }
+        : { username: values.identifier, password: values.password }
+      
+      const response = await authAPI.login(loginData)
+      
+      // Save token
+      if (response.token) {
+        Cookies.set("accessToken", response.token, { path: "/", expires: 7 })
         location.href = "/"
       }
     } catch (err: any) {

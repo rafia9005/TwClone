@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -6,24 +5,21 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-
-import Fetch from "@/lib/fetch"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { metaData } from "@/content"
-
+import { authAPI } from "@/lib/api"
 
 const registerSchema = z.object({
     email: z.string().min(1, "Email is required").email("Invalid email address"),
     name: z.string().min(1, "Name is required"),
     username: z.string().min(1, "Username is required"),
-    password: z.string().min(1, "Password is required"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
 })
 
 type registerValues = z.infer<typeof registerSchema>
 
 export default function Register() {
-
     const navigate = useNavigate()
     const [apiError, setApiError] = useState<string | null>(null)
     const form = useForm<registerValues>({
@@ -35,15 +31,14 @@ export default function Register() {
     async function onSubmit(values: registerValues) {
         setApiError(null)
         try {
-            await Fetch.post("/users", values)
+            await authAPI.register(values)
             navigate("/login")
         } catch (err: any) {
-            // Ambil error dari response
             const apiErr = err?.response?.data
             if (apiErr?.errors && Array.isArray(apiErr.errors)) {
                 setApiError(apiErr.errors.map((e: any) => e.message).join(", "))
             } else {
-                setApiError(apiErr?.message || "Register failed")
+                setApiError(apiErr?.message || "Registration failed")
             }
         }
     }

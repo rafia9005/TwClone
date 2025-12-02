@@ -113,11 +113,35 @@
 }
 
 @layer base {
+    /* Make base use CSS variables directly so theme switches (\`.dark\`) take immediate effect.
+       Some Tailwind utility names used in components map to these token names; we also add
+       a small set of utility helpers scoped under .app so the UI follows the theme tokens.
+    */
+
     * {
-        @apply border-border outline-ring/50;
+        box-sizing: border-box;
     }
 
     body {
-        @apply bg-background text-foreground;
+        background-color: var(--background);
+        color: var(--foreground);
+        font-family: inherit;
     }
+
+    /* Simple token-based utilities scoped to the app wrapper.
+       We keep these minimal and explicit so existing Tailwind class usage like
+       "bg-white"/"text-muted-foreground" can be migrated gradually.
+    */
+    .app .bg-card { background-color: var(--card); color: var(--card-foreground); }
+    .app .bg-surface-50 { background-color: var(--background); color: var(--foreground); }
+    .app .text-foreground { color: var(--foreground); }
+    .app .text-muted-foreground { color: var(--muted-foreground); }
+    .app .bg-muted { background-color: var(--muted); }
+    /* Escape slash for classes like bg-muted/50 used in some components. These approximate
+       a semi-transparent muted background by using the raw token and reduced opacity.
+       Note: opacity affects children; this is a pragmatic approximation for small UI elements.
+    */
+    .app .bg-muted\/50 { background-color: var(--muted); opacity: 0.5; }
+    .app .hover\:bg-card:hover { background-color: var(--card); }
+    .app .hover\:bg-muted\/80:hover { background-color: var(--muted); opacity: 0.8; }
 }

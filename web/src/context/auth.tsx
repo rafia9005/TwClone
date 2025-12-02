@@ -1,18 +1,6 @@
-import Fetch from "@/lib/fetch"
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import Cookies from "js-cookie"
-
-type User = {
-  id: number
-  email: string
-  name: string
-  username: string
-  avatar?: string
-  banner?: string
-  bio?: string
-  created_at?: string
-  updated_at?: string
-}
+import { userAPI, type User } from "@/lib/api"
 
 type AuthContextProps = {
   user: User | null
@@ -57,8 +45,8 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
         setLoading(false)
         return
       }
-      const res = await Fetch.get("/users/token")
-      setUser(res.data.data)
+      const userData = await userAPI.getMe()
+      setUser(userData)
     } catch (err: any) {
       setUser(null)
       if (err.response && err.response.status === 401) {

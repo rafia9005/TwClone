@@ -4,6 +4,10 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Index from './app/index'
 import Register from './app/auth/register'
 import Login from './app/auth/login'
+import ProfilePage from './app/profile/[id]'
+import NotificationsPage from './app/notifications/index'
+import ExplorePage from './app/explore/index'
+import TweetDetailPage from './app/tweet/[id]'
 import { ThemeProvider } from './components/theme-provider'
 import { AuthProvider } from './context/auth'
 
@@ -20,6 +24,10 @@ createRoot(document.getElementById('root')!).render(
           <Route path='' element={<Index />} />
           <Route path='register' element={<Register />} />
           <Route path='login' element={<Login />} />
+          <Route path='profile/:id' element={<ProfilePage />} />
+          <Route path='notifications' element={<NotificationsPage />} />
+          <Route path='explore' element={<ExplorePage />} />
+          <Route path='tweet/:id' element={<TweetDetailPage />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
